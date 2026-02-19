@@ -9,6 +9,7 @@ export interface HistoryRecord {
 export interface LotteryPool {
   participants: string[];
   drawn: string[];
+  prizeWinners: Record<string, string[]>;
 }
 
 const HISTORY_KEY = "random_history";
@@ -44,12 +45,23 @@ export function clearHistory() {
 }
 
 export function getLotteryPool(): LotteryPool {
-  if (typeof window === "undefined") return { participants: [], drawn: [] };
+  if (typeof window === "undefined") {
+    return { participants: [], drawn: [], prizeWinners: {} };
+  }
   try {
     const data = localStorage.getItem(LOTTERY_KEY);
-    return data ? JSON.parse(data) : { participants: [], drawn: [] };
+    if (!data) return { participants: [], drawn: [], prizeWinners: {} };
+    const parsed = JSON.parse(data) as Partial<LotteryPool>;
+    return {
+      participants: Array.isArray(parsed.participants) ? parsed.participants : [],
+      drawn: Array.isArray(parsed.drawn) ? parsed.drawn : [],
+      prizeWinners:
+        parsed.prizeWinners && typeof parsed.prizeWinners === "object"
+          ? parsed.prizeWinners
+          : {},
+    };
   } catch {
-    return { participants: [], drawn: [] };
+    return { participants: [], drawn: [], prizeWinners: {} };
   }
 }
 

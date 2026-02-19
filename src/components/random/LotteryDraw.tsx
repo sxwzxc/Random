@@ -9,14 +9,16 @@ import {
   saveLotteryPool,
   clearLotteryPool,
 } from "@/lib/storage";
-import { Gift, Plus, RotateCcw, X } from "lucide-react";
+import { Download, Gift, Plus, RotateCcw, X } from "lucide-react";
 
 export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
-  const [pool, setPool] = useState<{ participants: string[]; drawn: string[] }>({
-    participants: [],
-    drawn: [],
-  });
+  const [pool, setPool] = useState<{
+    participants: string[];
+    drawn: string[];
+    prizeWinners: Record<string, string[]>;
+  }>({ participants: [], drawn: [], prizeWinners: {} });
   const [input, setInput] = useState("");
+  const [prizeInput, setPrizeInput] = useState("一等奖:1\n二等奖:2\n三等奖:3");
   const [winner, setWinner] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
 
@@ -44,12 +46,74 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   };
 
   const removeParticipant = (name: string) => {
+    const nextPrizeWinners = Object.fromEntries(
+      Object.entries(pool.prizeWinners).map(([prize, winners]) => [
+        prize,
+        winners.filter((w) => w !== name),
+      ])
+    );
     const next = {
       participants: pool.participants.filter((p) => p !== name),
       drawn: pool.drawn.filter((d) => d !== name),
+      prizeWinners: nextPrizeWinners,
     };
     setPool(next);
     saveLotteryPool(next);
+  };
+
+  const drawByPrizes = () => {
+    const prizeConfigs = prizeInput
+      .split(/\n|,|，/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [name, count] = line.split(/[:：]/).map((s) => s.trim());
+        return { name, count: Number.parseInt(count || "0", 10) };
+      })
+      .filter((item) => item.name && Number.isFinite(item.count) && item.count > 0);
+
+    if (prizeConfigs.length === 0) return;
+    const nextDrawn = [...pool.drawn];
+    const nextPrizeWinners: Record<string, string[]> = { ...pool.prizeWinners };
+
+    for (const prize of prizeConfigs) {
+      const available = pool.participants.filter((p) => !nextDrawn.includes(p));
+      if (available.length === 0) break;
+      const drawCount = Math.min(prize.count, available.length);
+      const winners: string[] = [];
+      for (let i = 0; i < drawCount; i++) {
+        const index = Math.floor(Math.random() * available.length);
+        const selected = available.splice(index, 1)[0];
+        winners.push(selected);
+        nextDrawn.push(selected);
+      }
+      if (winners.length > 0) {
+        nextPrizeWinners[prize.name] = [
+          ...(nextPrizeWinners[prize.name] || []),
+          ...winners,
+        ];
+      }
+    }
+
+    if (nextDrawn.length === pool.drawn.length) return;
+    const next = {
+      ...pool,
+      drawn: nextDrawn,
+      prizeWinners: nextPrizeWinners,
+    };
+    setPool(next);
+    saveLotteryPool(next);
+    const prizeResult = Object.entries(nextPrizeWinners)
+      .filter(([, winners]) => winners.length > 0)
+      .map(([prize, winners]) => `${prize}: ${winners.join("、")}`)
+      .join("；");
+    setWinner(prizeResult);
+    addHistory({
+      type: "抽奖",
+      result: "按奖项抽奖完成",
+      detail: `已抽出 ${next.drawn.length}/${next.participants.length} 人`,
+    });
+    onUpdate();
   };
 
   const draw = () => {
@@ -85,7 +149,7 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   };
 
   const resetDraw = () => {
-    const next = { ...pool, drawn: [] };
+    const next = { ...pool, drawn: [], prizeWinners: {} };
     setPool(next);
     saveLotteryPool(next);
     setWinner(null);
@@ -93,8 +157,26 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
 
   const clearAll = () => {
     clearLotteryPool();
-    setPool({ participants: [], drawn: [] });
+    setPool({ participants: [], drawn: [], prizeWinners: {} });
     setWinner(null);
+  };
+
+  const exportWinners = () => {
+    const lines = Object.entries(pool.prizeWinners)
+      .filter(([, winners]) => winners.length > 0)
+      .map(([prize, winners]) => `${prize},${winners.join(",")}`);
+    if (lines.length === 0) return;
+    const blob = new Blob([`\uFEFF奖项,名单\n${lines.join("\n")}`], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `lottery-${Date.now()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const available = pool.participants.filter(
@@ -130,6 +212,17 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
               <Plus className="w-4 h-4" />
             </Button>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm text-gray-400">奖项设置（每行 奖项:人数）</label>
+          <textarea
+            value={prizeInput}
+            onChange={(e) => setPrizeInput(e.target.value)}
+            placeholder="一等奖:1"
+            rows={3}
+            className="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+          />
         </div>
 
         {pool.participants.length > 0 && (
@@ -177,6 +270,14 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
               ? "全部已抽完"
               : "🎉 开始抽奖"}
           </Button>
+          <Button
+            onClick={drawByPrizes}
+            disabled={available.length === 0}
+            variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-800 cursor-pointer"
+          >
+            按奖项抽取
+          </Button>
           {pool.drawn.length > 0 && (
             <Button
               onClick={resetDraw}
@@ -193,6 +294,15 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
               className="border-gray-600 text-red-400 hover:bg-gray-800 cursor-pointer"
             >
               清空
+            </Button>
+          )}
+          {Object.values(pool.prizeWinners).some((winners) => winners.length > 0) && (
+            <Button
+              onClick={exportWinners}
+              variant="outline"
+              className="border-gray-600 text-gray-300 hover:bg-gray-800 cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
             </Button>
           )}
         </div>
@@ -213,6 +323,18 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
         {pool.drawn.length > 0 && (
           <div className="text-xs text-gray-500">
             已抽出: {pool.drawn.join(", ")}
+          </div>
+        )}
+        {Object.entries(pool.prizeWinners).some(([, winners]) => winners.length > 0) && (
+          <div className="space-y-1 text-sm text-gray-300">
+            {Object.entries(pool.prizeWinners).map(
+              ([prize, winners]) =>
+                winners.length > 0 && (
+                  <div key={prize}>
+                    {prize}: {winners.join("、")}
+                  </div>
+                )
+            )}
           </div>
         )}
       </CardContent>
