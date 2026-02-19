@@ -169,7 +169,6 @@ export default function DecisionHelper({
     requestAnimationFrame(tick);
   };
 
-  const validCount = valid.length;
   const wheelBackground = useMemo(() => {
     if (!valid.length) return "conic-gradient(#9ca3af 0deg 360deg)";
     const colors = [
@@ -327,7 +326,7 @@ export default function DecisionHelper({
             setResult(null);
             setReadyToSpin(true);
           }}
-          disabled={animating || validCount < 2 || readyToSpin}
+          disabled={animating || valid.length < 2 || readyToSpin}
           className="w-full bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
         >
           {animating ? text.spinning : readyToSpin ? text.ready : text.start}

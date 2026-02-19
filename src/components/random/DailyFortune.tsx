@@ -109,7 +109,6 @@ export default function DailyFortune({ onUpdate, locale }: { onUpdate: () => voi
       reset: "每日运势每天重置一次",
       newName: "测试新昵称 →",
       empty: "输入昵称后点击揭晓，支持多人测试",
-      selected: "命运之选",
     },
     en: {
       title: "Daily Fortune",
@@ -122,7 +121,6 @@ export default function DailyFortune({ onUpdate, locale }: { onUpdate: () => voi
       reset: "Fortune resets once per day",
       newName: "Try another nickname →",
       empty: "Enter a nickname and reveal fortune",
-      selected: "Fortune Result",
     },
   }[locale];
 
