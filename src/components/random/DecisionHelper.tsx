@@ -8,6 +8,11 @@ import { HelpCircle, Plus, X } from "lucide-react";
 
 const DECELERATION_FACTOR = 0.985;
 const STOP_THRESHOLD = 0.15;
+const MIN_SPIN_SPEED = 2;
+const MS_PER_FRAME = 16.67;
+const ANGLE_NORMALIZATION_OFFSET = 540;
+const MIN_DRAG_DELTA = 0.1;
+const DEFAULT_CLICK_SPEED = 16;
 
 export default function DecisionHelper({
   onUpdate,
@@ -30,6 +35,8 @@ export default function DecisionHelper({
     lastAngle: 0,
     lastTime: 0,
     velocity: 0,
+    centerX: 0,
+    centerY: 0,
   });
 
   const addOption = () => setOptions([...options, { text: "", weight: 1 }]);
@@ -76,12 +83,12 @@ export default function DecisionHelper({
     return valid[valid.length - 1]?.text ?? null;
   };
 
-  const getPointerAngle = (clientX: number, clientY: number) => {
-    const wheel = wheelRef.current;
-    if (!wheel) return 0;
-    const rect = wheel.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+  const getPointerAngle = (
+    clientX: number,
+    clientY: number,
+    centerX: number,
+    centerY: number
+  ) => {
     return (Math.atan2(clientY - centerY, clientX - centerX) * 180) / Math.PI;
   };
 
@@ -92,7 +99,8 @@ export default function DecisionHelper({
     const totalWeight = valid.reduce((sum, item) => sum + item.weight, 0);
     let current = rotationRef.current;
     let velocity = speed;
-    if (Math.abs(velocity) < 2) velocity = velocity >= 0 ? 2 : -2;
+    if (Math.abs(velocity) < MIN_SPIN_SPEED)
+      velocity = velocity >= 0 ? MIN_SPIN_SPEED : -MIN_SPIN_SPEED;
 
     const tick = () => {
       current += velocity;
@@ -174,32 +182,51 @@ export default function DecisionHelper({
             ref={wheelRef}
             onPointerDown={(e) => {
               if (!readyToSpin || animating) return;
-              const angle = getPointerAngle(e.clientX, e.clientY);
+              const rect = e.currentTarget.getBoundingClientRect();
+              const centerX = rect.left + rect.width / 2;
+              const centerY = rect.top + rect.height / 2;
+              const angle = getPointerAngle(
+                e.clientX,
+                e.clientY,
+                centerX,
+                centerY
+              );
               dragRef.current = {
                 dragging: true,
                 moved: false,
                 lastAngle: angle,
                 lastTime: performance.now(),
                 velocity: 0,
+                centerX,
+                centerY,
               };
               e.currentTarget.setPointerCapture(e.pointerId);
             }}
             onPointerMove={(e) => {
               if (!dragRef.current.dragging || animating) return;
-              const angle = getPointerAngle(e.clientX, e.clientY);
+              const angle = getPointerAngle(
+                e.clientX,
+                e.clientY,
+                dragRef.current.centerX,
+                dragRef.current.centerY
+              );
               const delta =
-                ((angle - dragRef.current.lastAngle + 540) % 360) - 180;
+                ((angle - dragRef.current.lastAngle + ANGLE_NORMALIZATION_OFFSET) %
+                  360) -
+                180;
               const now = performance.now();
               const dt = Math.max(now - dragRef.current.lastTime, 1);
-              const velocity = delta / (dt / 16.67);
+              const velocity = delta / (dt / MS_PER_FRAME);
               rotationRef.current += delta;
               setRotation(rotationRef.current);
               dragRef.current = {
                 dragging: true,
-                moved: dragRef.current.moved || Math.abs(delta) > 0.1,
+                moved: dragRef.current.moved || Math.abs(delta) > MIN_DRAG_DELTA,
                 lastAngle: angle,
                 lastTime: now,
                 velocity,
+                centerX: dragRef.current.centerX,
+                centerY: dragRef.current.centerY,
               };
             }}
             onPointerUp={(e) => {
@@ -207,7 +234,7 @@ export default function DecisionHelper({
               e.currentTarget.releasePointerCapture(e.pointerId);
               const launchSpeed = dragRef.current.moved
                 ? dragRef.current.velocity
-                : 16;
+                : DEFAULT_CLICK_SPEED;
               dragRef.current.dragging = false;
               decide(launchSpeed);
             }}
