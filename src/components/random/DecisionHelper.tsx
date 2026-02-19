@@ -12,7 +12,8 @@ const MIN_SPIN_SPEED = 2;
 const MS_PER_FRAME = 16.67;
 const ANGLE_NORMALIZATION_OFFSET = 540;
 const MIN_DRAG_DELTA = 0.1;
-const DEFAULT_CLICK_SPEED = 16;
+const MIN_CLICK_SPEED = 12;
+const MAX_CLICK_SPEED = 22;
 
 export default function DecisionHelper({
   onUpdate,
@@ -171,12 +172,17 @@ export default function DecisionHelper({
         <div className="relative mx-auto w-56 h-56">
           <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-l-transparent border-r-transparent border-b-purple-300" />
           <div
-            className={`w-full h-full rounded-full border-4 border-gray-700 shadow-lg transition-transform ${
-              animating ? "" : readyToSpin ? "cursor-grab" : "cursor-default"
+            className={`w-full h-full rounded-full border-4 border-gray-700 shadow-lg ${
+              animating
+                ? "cursor-grabbing"
+                : readyToSpin
+                ? "cursor-grab"
+                : "cursor-default"
             }`}
             style={{
               background: wheelBackground,
               transform: `rotate(${rotation}deg)`,
+              touchAction: readyToSpin ? "none" : "auto",
             }}
             id="decision-wheel"
             ref={wheelRef}
@@ -234,7 +240,8 @@ export default function DecisionHelper({
               e.currentTarget.releasePointerCapture(e.pointerId);
               const launchSpeed = dragRef.current.moved
                 ? dragRef.current.velocity
-                : DEFAULT_CLICK_SPEED;
+                : MIN_CLICK_SPEED +
+                  Math.random() * (MAX_CLICK_SPEED - MIN_CLICK_SPEED);
               dragRef.current.dragging = false;
               decide(launchSpeed);
             }}
