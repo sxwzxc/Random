@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { addHistory } from "@/lib/storage";
 import { HelpCircle, Plus, X } from "lucide-react";
 
+const DECELERATION_FACTOR = 0.985;
+const STOP_THRESHOLD = 0.15;
+
 export default function DecisionHelper({
   onUpdate,
 }: {
@@ -55,7 +58,7 @@ export default function DecisionHelper({
     if (!valid.length) return null;
     const totalWeight = valid.reduce((sum, item) => sum + item.weight, 0);
     if (!totalWeight) return null;
-    const normalized = ((360 - (angle % 360)) + 360) % 360;
+    const normalized = ((360 - angle) % 360 + 360) % 360;
     let accumulated = 0;
     for (const item of valid) {
       accumulated += (item.weight / totalWeight) * 360;
@@ -73,12 +76,12 @@ export default function DecisionHelper({
 
     const tick = () => {
       current += velocity;
-      velocity *= 0.985;
+      velocity *= DECELERATION_FACTOR;
       setRotation(current);
       const currentResult = pickByRotation(current);
       if (currentResult) setResult(currentResult);
 
-      if (velocity > 0.15) {
+      if (velocity > STOP_THRESHOLD) {
         requestAnimationFrame(tick);
         return;
       }
