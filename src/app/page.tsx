@@ -11,6 +11,7 @@ import {
   Users,
   History,
   Shuffle,
+  Github,
 } from "lucide-react";
 import RandomNumber from "@/components/random/RandomNumber";
 import DecisionHelper from "@/components/random/DecisionHelper";
@@ -79,19 +80,14 @@ export default function Home() {
               <h1 className="text-lg font-semibold">随机万事屋</h1>
             </div>
             <a
-              href="https://pages.edgeone.ai"
+              href="https://github.com/sxwzxc/Random"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="EdgeOne Pages"
+              aria-label="GitHub Repository"
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
             >
-              <img
-                src="/eo-logo-blue.svg"
-                alt="EdgeOne"
-                width={20}
-                height={20}
-              />
-              <span className="hidden sm:inline">EdgeOne Pages</span>
+              <Github className="w-5 h-5" />
+              <span className="hidden sm:inline">sxwzxc/Random</span>
             </a>
           </div>
         </div>
@@ -148,8 +144,18 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-gray-800 mt-12">
         <div className="container mx-auto px-6 py-6">
-          <div className="text-center text-gray-500 text-sm">
-            <p>Powered by EdgeOne Pages</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-gray-500 text-sm">
+            <span>Made by <a href="https://github.com/sxwzxc" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">sxwzxc</a></span>
+            <span className="hidden sm:inline text-gray-700">·</span>
+            <a
+              href="https://github.com/sxwzxc/Random"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors"
+            >
+              <Github className="w-4 h-4" />
+              <span>GitHub</span>
+            </a>
           </div>
         </div>
       </footer>
