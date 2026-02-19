@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,13 +87,9 @@ export default function LotteryDraw({ onUpdate, locale }: { onUpdate: () => void
     },
   }[locale];
 
-  const loadPool = useCallback(() => {
+  useEffect(() => {
     setPool(getLotteryPool());
   }, []);
-
-  useEffect(() => {
-    loadPool();
-  }, [loadPool]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
