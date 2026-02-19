@@ -82,6 +82,7 @@ export default function Home() {
               href="https://pages.edgeone.ai"
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="EdgeOne Pages"
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
             >
               <img

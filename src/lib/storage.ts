@@ -28,7 +28,9 @@ export function addHistory(record: Omit<HistoryRecord, "id" | "timestamp">) {
   const history = getHistory();
   const newRecord: HistoryRecord = {
     ...record,
-    id: crypto.randomUUID(),
+    id: typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     timestamp: Date.now(),
   };
   history.unshift(newRecord);

@@ -27,7 +27,11 @@ export default function TeamSplitter({ onUpdate }: { onUpdate: () => void }) {
   };
 
   const splitTeams = () => {
-    const shuffled = [...members].sort(() => Math.random() - 0.5);
+    const shuffled = [...members];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
     const result: string[][] = Array.from({ length: teamCount }, () => []);
     shuffled.forEach((m, i) => result[i % teamCount].push(m));
     setTeams(result);
