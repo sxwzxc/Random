@@ -1,160 +1,43 @@
-# Node Functions on EdgeOne Pages - Koa Demo Website
+[🇨🇳 中文](./README.md) | **Current: English**
 
-A demonstration website for function requests developed with Next.js + Tailwind CSS + shadcn/ui technology stack, showcasing how to deploy and run Node Functions based on the Koa framework on EdgeOne Pages.
+# Random Utility Hub
 
-## 🚀 Features
+A random-toolbox app built with Next.js 15 + React 19 + Tailwind CSS 4.
 
-- **Modern UI Design**：Adopting a black background with white text theme, using #1c66e5 as the accent color
-- **Responsive Layout**：Supporting desktop and mobile devices, providing the best user experience
-- **Real-time API Demo**：Integrating Express backend, supporting real-time function call testing
-- **Componentized Architecture**：Using shadcn/ui style component system
-- **TypeScript Support**：Complete type definitions and type safety
+Features include:
 
-## 🛠️ Technology Stack
+- Random number generator
+- Decision helper wheel
+- Daily fortune
+- Lottery draw
+- Coin flip
+- Dice roll
+- Team splitter
+- History panel
 
-### Frontend
-- **Next.js 15** - React full-stack framework
-- **React 19** - User interface library
-- **TypeScript** - Type-safe JavaScript
-- **Tailwind CSS 4** - Utility-first CSS framework
+## Added in this update
 
-### UI Components
-- **shadcn/ui** - High-quality React components
-- **Lucide React** - Beautiful icon library
-- **class-variance-authority** - Component style variant management
-- **clsx & tailwind-merge** - CSS class name merging tool
+- 🌐 **Language switcher**: Chinese / English
+- 🌓 **Theme switcher**: Dark / Light mode with persisted preference
 
-### Backend
-- **Express.js** - Node.js Web application framework
-- **Node Functions** - EdgeOne Pages serverless function
-
-## 📁 Project Structure
-
-```
-express-template/
-├── src/
-│   ├── app/                 # Next.js App Router
-│   │   ├── globals.css     # Global styles
-│   │   ├── layout.tsx      # Root layout
-│   │   └── page.tsx        # Main page
-│   ├── components/         # React components
-│   │   └── ui/            # UI basic components
-│   │       ├── button.tsx  # Button component
-│   │       └── card.tsx    # Card component
-│   └── lib/               # Utility functions
-│       └── utils.ts       # General utilities
-├── public/                # Static resources
-├── package.json           # Project configuration
-└── README.md             # Project documentation
-```
-
-## 🚀 Quick Start
-
-### Environment Requirements
-
-- Node.js 18+ 
-- npm or yarn
-
-### Install Dependencies
+## Local Development
 
 ```bash
 npm install
-# or
-yarn install
+npm run dev
 ```
 
-### Development Mode
+## Validation
 
 ```bash
-edgeone pages dev
+npm run lint
+npm run build
 ```
 
-Access [http://localhost:8088](http://localhost:8088) to view the application.
+## Author
 
-### Build Production Version
+- [sxwzxc](https://github.com/sxwzxc)
 
-```bash
-edgeone pages build
-```
+## License
 
-## 🎯 Core Features
-
-### 1. Main Page Display
-- Project title and description
-- One-click deployment and documentation view button
-- Express code example display
-
-### 2. API Call Demo
-- Real-time function call testing
-- Loading status display
-- Result display
-
-### 3. Responsive Design
-- Mobile-friendly layout
-- Adaptive component sizing
-- Touch-friendly interaction
-
-## 🔧 Configuration Explanation
-
-### Tailwind CSS Configuration
-The project uses Tailwind CSS 4, supporting custom color variables:
-
-```css
-:root {
-  --primary: #1c66e5;        /* Primary color */
-  --background: #000000;     /* Background color */
-  --foreground: #ffffff;     /* Foreground color */
-}
-```
-
-### Component Style
-Using `class-variance-authority` to manage component style variants, supporting multiple preset styles.
-
-## 📚 Documentation Entry
-
-- **EdgeOne Pages Official Documentation**：[https://docs.edgeone.com](https://docs.edgeone.com)
-- **Next.js Documentation**：[https://nextjs.org/docs](https://nextjs.org/docs)
-- **Tailwind CSS Documentation**：[https://tailwindcss.com/docs](https://tailwindcss.com/docs)
-- **Express.js Documentation**：[https://expressjs.com](https://expressjs.com)
-
-## 🚀 Deployment Guide
-
-### EdgeOne Pages Deployment
-
-1. Push the code to a GitHub repository
-2. Create a new project in the EdgeOne Pages console
-3. Select the GitHub repository as the source
-4. Configure the build command: `npm run build`
-5. Configure the output directory: `.next`
-6. Deploy the project
-
-### Node Functions Configuration
-
-Create a `node-functions/` folder in the project root directory, adding an Express application:
-
-```javascript
-// node-functions/express/[[default]].js
-import express from "express";
-const app = express();
-
-app.get("/", (req, res) => {
-  res.json({ message: "Hello from Express on Node Functions!" });
-});
-
-export default app;
-```
-
-
-## Deployment
-
-[![Deploy with EdgeOne Pages](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?from=github&template=koa-template)
-
-
-## 👤 Author
-
-**sxwzxc**
-
-
-## 📄 License
-
-This project uses the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT

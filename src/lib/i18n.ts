@@ -9,4 +9,3 @@ export const HISTORY_TYPES = {
   dice: { zh: "掷骰子", en: "Dice Roll" },
   team: { zh: "随机分组", en: "Team Splitter" },
 } as const;
-

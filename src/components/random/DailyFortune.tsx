@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { addHistory } from "@/lib/storage";
@@ -135,13 +135,10 @@ export default function DailyFortune({ onUpdate, locale }: { onUpdate: () => voi
       setFortune(JSON.parse(cached));
       setRevealed(true);
       setCurrentName("");
-    } else {
-      setFortune(null);
-      setRevealed(false);
     }
   }, [locale]);
 
-  const handleReveal = useCallback(() => {
+  const handleReveal = () => {
     const name = nickname.trim();
     const f = getDailyFortune(locale, name);
     setFortune(f);
@@ -155,7 +152,7 @@ export default function DailyFortune({ onUpdate, locale }: { onUpdate: () => voi
       detail: `${text.luckyNumber}: ${f.luckyNumber}, ${text.luckyColor}: ${f.luckyColor}`,
     });
     onUpdate();
-  }, [onUpdate, nickname, locale, text.luckyColor, text.luckyNumber]);
+  };
 
   const switchTo = (name: string) => {
     const f = getDailyFortune(locale, name);

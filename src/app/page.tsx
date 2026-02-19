@@ -118,6 +118,7 @@ export default function Home() {
   }, [refreshHistory]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const storedLocale = localStorage.getItem("app_locale");
     if (storedLocale === "zh" || storedLocale === "en") {
       setLocale(storedLocale);
@@ -125,9 +126,9 @@ export default function Home() {
     const storedTheme = localStorage.getItem("app_theme");
     if (storedTheme === "dark" || storedTheme === "light") {
       setTheme(storedTheme);
-      return;
+    } else {
+      setTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     }
-    setTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   }, []);
 
   useEffect(() => {

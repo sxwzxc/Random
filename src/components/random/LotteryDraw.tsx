@@ -27,8 +27,10 @@ export default function LotteryDraw({ onUpdate, locale }: { onUpdate: () => void
     prizeWinners: Record<string, string[]>;
   }>({ participants: [], drawn: [], prizeWinners: {} });
   const [input, setInput] = useState("");
-  const [prizeInput, setPrizeInput] = useState(
-    locale === "zh" ? "一等奖:1\n二等奖:2\n三等奖:3" : "First Prize:1\nSecond Prize:2\nThird Prize:3"
+  const [prizeInput, setPrizeInput] = useState(() =>
+    locale === "zh"
+      ? "一等奖:1\n二等奖:2\n三等奖:3"
+      : "First Prize:1\nSecond Prize:2\nThird Prize:3"
   );
   const [winner, setWinner] = useState<string | null>(null);
   const [winnerPrize, setWinnerPrize] = useState<string | null>(null);
@@ -84,10 +86,6 @@ export default function LotteryDraw({ onUpdate, locale }: { onUpdate: () => void
       detailDrawn: "Drawn",
     },
   }[locale];
-
-  useEffect(() => {
-    setPrizeInput(locale === "zh" ? "一等奖:1\n二等奖:2\n三等奖:3" : "First Prize:1\nSecond Prize:2\nThird Prize:3");
-  }, [locale]);
 
   const loadPool = useCallback(() => {
     setPool(getLotteryPool());
