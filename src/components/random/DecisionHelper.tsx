@@ -6,14 +6,17 @@ import { Button } from "@/components/ui/button";
 import { addHistory } from "@/lib/storage";
 import { HelpCircle, Plus, X } from "lucide-react";
 
-const DECELERATION_FACTOR = 0.985;
 const STOP_THRESHOLD = 0.15;
 const MIN_SPIN_SPEED = 2;
 const MS_PER_FRAME = 16.67;
 const ANGLE_NORMALIZATION_OFFSET = 540;
 const MIN_DRAG_DELTA = 0.1;
-const MIN_CLICK_SPEED = 12;
-const MAX_CLICK_SPEED = 22;
+const MIN_CLICK_SPEED = 18;
+const MAX_CLICK_SPEED = 32;
+// Progressive deceleration: high speed → low resistance, slows gradually
+const DECEL_BASE = 0.975;
+const DECEL_RANGE = 0.02;
+const DECEL_SPEED_SCALE = 15;
 
 export default function DecisionHelper({
   onUpdate,
@@ -105,7 +108,8 @@ export default function DecisionHelper({
 
     const tick = () => {
       current += velocity;
-      velocity *= DECELERATION_FACTOR;
+      const speed = Math.abs(velocity);
+      velocity *= DECEL_BASE + DECEL_RANGE * Math.min(1, speed / DECEL_SPEED_SCALE);
       rotationRef.current = current;
       setRotation(current);
 
@@ -170,7 +174,7 @@ export default function DecisionHelper({
           输入选项，让命运帮你做出选择！
         </p>
         <div className="relative mx-auto w-56 h-56">
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-l-transparent border-r-transparent border-b-purple-300" />
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[12px] border-r-[12px] border-t-[18px] border-l-transparent border-r-transparent border-t-yellow-400" />
           <div
             className={`w-full h-full rounded-full border-4 border-gray-700 shadow-lg ${
               animating
