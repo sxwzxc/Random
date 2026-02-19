@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { addHistory } from "@/lib/storage";
 import { HelpCircle, Plus, X } from "lucide-react";
+import { HISTORY_TYPES, type Locale } from "@/lib/i18n";
 
 const STOP_THRESHOLD = 0.15;
 const MIN_SPIN_SPEED = 2;
@@ -13,15 +14,16 @@ const ANGLE_NORMALIZATION_OFFSET = 540;
 const MIN_DRAG_DELTA = 0.1;
 const MIN_CLICK_SPEED = 18;
 const MAX_CLICK_SPEED = 32;
-// Progressive deceleration: high speed → low resistance, slows gradually
 const DECEL_BASE = 0.975;
 const DECEL_RANGE = 0.02;
 const DECEL_SPEED_SCALE = 15;
 
 export default function DecisionHelper({
   onUpdate,
+  locale,
 }: {
   onUpdate: () => void;
+  locale: Locale;
 }) {
   const [options, setOptions] = useState([
     { text: "", weight: 1 },
@@ -42,6 +44,35 @@ export default function DecisionHelper({
     centerX: 0,
     centerY: 0,
   });
+
+  const text = {
+    zh: {
+      title: "选择困难助手",
+      intro: "输入选项，让命运帮你做出选择！",
+      option: "选项",
+      weight: "比重",
+      add: "添加选项",
+      spinning: "转盘旋转中...",
+      ready: "请点击或拖动转盘施加初速度",
+      start: "开始转盘",
+      tip: "在转盘上点击或拖动后松手，系统会按你的手势速度继续旋转",
+      result: "命运之选",
+      detail: "选项",
+    },
+    en: {
+      title: "Decision Helper",
+      intro: "Enter options and let fate decide.",
+      option: "Option",
+      weight: "Weight",
+      add: "Add Option",
+      spinning: "Spinning...",
+      ready: "Click or drag the wheel to launch",
+      start: "Start Wheel",
+      tip: "Click or drag the wheel, then release to keep spinning",
+      result: "Chosen by Fate",
+      detail: "Options",
+    },
+  }[locale];
 
   const addOption = () => setOptions([...options, { text: "", weight: 1 }]);
 
@@ -126,9 +157,9 @@ export default function DecisionHelper({
       setResult(final);
       setAnimating(false);
       addHistory({
-        type: "选择助手",
+        type: HISTORY_TYPES.decision[locale],
         result: final,
-        detail: `选项: ${valid
+        detail: `${text.detail}: ${valid
           .map((item) => `${item.text}(${item.weight}/${totalWeight})`)
           .join(", ")}`,
       });
@@ -140,7 +171,7 @@ export default function DecisionHelper({
 
   const validCount = valid.length;
   const wheelBackground = useMemo(() => {
-    if (!valid.length) return "conic-gradient(#4b5563 0deg 360deg)";
+    if (!valid.length) return "conic-gradient(#9ca3af 0deg 360deg)";
     const colors = [
       "#a855f7",
       "#3b82f6",
@@ -162,21 +193,19 @@ export default function DecisionHelper({
   }, [valid]);
 
   return (
-    <Card className="bg-gray-900 border-gray-700">
+    <Card className="bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-700">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-white">
-          <HelpCircle className="w-5 h-5 text-purple-400" />
-          选择困难助手
+        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+          <HelpCircle className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+          {text.title}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-gray-400">
-          输入选项，让命运帮你做出选择！
-        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{text.intro}</p>
         <div className="relative mx-auto w-56 h-56">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[12px] border-r-[12px] border-t-[18px] border-l-transparent border-r-transparent border-t-yellow-400" />
           <div
-            className={`w-full h-full rounded-full border-4 border-gray-700 shadow-lg ${
+            className={`w-full h-full rounded-full border-4 border-gray-400 dark:border-gray-700 shadow-lg ${
               animating
                 ? "cursor-grabbing"
                 : readyToSpin
@@ -263,8 +292,8 @@ export default function DecisionHelper({
               type="text"
               value={opt.text}
               onChange={(e) => updateOption(i, e.target.value)}
-              placeholder={`选项 ${i + 1}`}
-              className="flex-1 bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder={`${text.option} ${i + 1}`}
+              className="flex-1 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <input
               type="number"
@@ -272,13 +301,13 @@ export default function DecisionHelper({
               step="0.1"
               value={opt.weight}
               onChange={(e) => updateWeight(i, e.target.value)}
-              className="w-20 bg-gray-800 border border-gray-600 rounded-md px-2 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              aria-label={`选项 ${i + 1} 比重`}
+              className="w-20 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              aria-label={`${text.option} ${i + 1} ${text.weight}`}
             />
             {options.length > 2 && (
               <button
                 onClick={() => removeOption(i)}
-                className="p-1 text-gray-400 hover:text-red-400 cursor-pointer"
+                className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-400 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -288,10 +317,10 @@ export default function DecisionHelper({
         <Button
           variant="outline"
           onClick={addOption}
-          className="w-full border-dashed border-gray-600 text-gray-400 hover:text-white hover:bg-gray-800 cursor-pointer"
+          className="w-full border-dashed border-gray-400 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
         >
           <Plus className="w-4 h-4 mr-1" />
-          添加选项
+          {text.add}
         </Button>
         <Button
           onClick={() => {
@@ -301,22 +330,16 @@ export default function DecisionHelper({
           disabled={animating || validCount < 2 || readyToSpin}
           className="w-full bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
         >
-          {animating
-            ? "转盘旋转中..."
-            : readyToSpin
-            ? "请点击或拖动转盘施加初速度"
-            : "开始转盘"}
+          {animating ? text.spinning : readyToSpin ? text.ready : text.start}
         </Button>
         {readyToSpin && !animating && (
-          <p className="text-xs text-center text-gray-400">
-            在转盘上点击或拖动后松手，系统会按你的手势速度继续旋转
-          </p>
+          <p className="text-xs text-center text-gray-600 dark:text-gray-400">{text.tip}</p>
         )}
         {result && (
-          <div className="text-center py-4 bg-gray-800 rounded-lg">
-            <p className="text-sm text-gray-400 mb-1">命运之选</p>
+          <div className="text-center py-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{text.result}</p>
             <p
-              className={`text-3xl font-bold text-purple-400 transition-all ${
+              className={`text-3xl font-bold text-purple-500 dark:text-purple-400 transition-all ${
                 animating ? "opacity-50" : "opacity-100"
               }`}
             >

@@ -1,136 +1,138 @@
-# Node Functions on EdgeOne Pages - Koa Demo Website
+[🇨🇳 中文](./README.md) | [🇺🇸 English](./README_EN.md)
 
-A demonstration website for function requests developed with Next.js + Tailwind CSS + shadcn/ui technology stack, showcasing how to deploy and run Node Functions based on the Koa framework on EdgeOne Pages.
+# Node Functions on EdgeOne Pages - Koa 演示网站
 
-## 🚀 Features
+一个基于 Next.js + Tailwind CSS + shadcn/ui 技术栈开发的函数请求演示网站，展示如何在 EdgeOne Pages 上部署和运行基于 Koa 框架的 Node Functions。
 
-- **Modern UI Design**：Adopting a black background with white text theme, using #1c66e5 as the accent color
-- **Responsive Layout**：Supporting desktop and mobile devices, providing the best user experience
-- **Real-time API Demo**：Integrating Express backend, supporting real-time function call testing
-- **Componentized Architecture**：Using shadcn/ui style component system
-- **TypeScript Support**：Complete type definitions and type safety
+## 🚀 特性
 
-## 🛠️ Technology Stack
+- **现代化 UI 设计**：采用黑底白字主题，使用 #1c66e5 作为点缀色
+- **响应式布局**：支持桌面端和移动端，提供最佳用户体验
+- **实时 API 演示**：集成 Express 后端，支持实时函数调用测试
+- **组件化架构**：使用 shadcn/ui 风格的组件系统
+- **TypeScript 支持**：完整的类型定义和类型安全
 
-### Frontend
-- **Next.js 15** - React full-stack framework
-- **React 19** - User interface library
-- **TypeScript** - Type-safe JavaScript
-- **Tailwind CSS 4** - Utility-first CSS framework
+## 🛠️ 技术栈
 
-### UI Components
-- **shadcn/ui** - High-quality React components
-- **Lucide React** - Beautiful icon library
-- **class-variance-authority** - Component style variant management
-- **clsx & tailwind-merge** - CSS class name merging tool
+### 前端
+- **Next.js 15** - React 全栈框架
+- **React 19** - 用户界面库
+- **TypeScript** - 类型安全的 JavaScript
+- **Tailwind CSS 4** - 实用优先的 CSS 框架
 
-### Backend
-- **Express.js** - Node.js Web application framework
-- **Node Functions** - EdgeOne Pages serverless function
+### UI 组件
+- **shadcn/ui** - 高质量 React 组件
+- **Lucide React** - 精美的图标库
+- **class-variance-authority** - 组件样式变体管理
+- **clsx & tailwind-merge** - CSS 类名合并工具
 
-## 📁 Project Structure
+### 后端
+- **Express.js** - Node.js Web 应用框架
+- **Node Functions** - EdgeOne Pages 无服务器函数
+
+## 📁 项目结构
 
 ```
 express-template/
 ├── src/
 │   ├── app/                 # Next.js App Router
-│   │   ├── globals.css     # Global styles
-│   │   ├── layout.tsx      # Root layout
-│   │   └── page.tsx        # Main page
-│   ├── components/         # React components
-│   │   └── ui/            # UI basic components
-│   │       ├── button.tsx  # Button component
-│   │       └── card.tsx    # Card component
-│   └── lib/               # Utility functions
-│       └── utils.ts       # General utilities
-├── public/                # Static resources
-├── package.json           # Project configuration
-└── README.md             # Project documentation
+│   │   ├── globals.css     # 全局样式
+│   │   ├── layout.tsx      # 根布局
+│   │   └── page.tsx        # 主页面
+│   ├── components/         # React 组件
+│   │   └── ui/            # UI 基础组件
+│   │       ├── button.tsx  # 按钮组件
+│   │       └── card.tsx    # 卡片组件
+│   └── lib/               # 工具函数
+│       └── utils.ts       # 通用工具
+├── public/                # 静态资源
+├── package.json           # 项目配置
+└── README.md             # 项目文档
 ```
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### Environment Requirements
+### 环境要求
 
 - Node.js 18+ 
-- npm or yarn
+- npm 或 yarn
 
-### Install Dependencies
+### 安装依赖
 
 ```bash
 npm install
-# or
+# 或
 yarn install
 ```
 
-### Development Mode
+### 开发模式
 
 ```bash
 edgeone pages dev
 ```
 
-Access [http://localhost:8088](http://localhost:8088) to view the application.
+访问 [http://localhost:8088](http://localhost:8088) 查看应用。
 
-### Build Production Version
+### 构建生产版本
 
 ```bash
 edgeone pages build
 ```
 
-## 🎯 Core Features
+## 🎯 核心功能
 
-### 1. Main Page Display
-- Project title and description
-- One-click deployment and documentation view button
-- Express code example display
+### 1. 主页面展示
+- 项目标题和描述
+- 一键部署和查看文档按钮
+- Express 代码示例展示
 
-### 2. API Call Demo
-- Real-time function call testing
-- Loading status display
-- Result display
+### 2. API 调用演示
+- 实时函数调用测试
+- 加载状态显示
+- 结果展示
 
-### 3. Responsive Design
-- Mobile-friendly layout
-- Adaptive component sizing
-- Touch-friendly interaction
+### 3. 响应式设计
+- 移动端友好的布局
+- 自适应组件尺寸
+- 触摸友好的交互
 
-## 🔧 Configuration Explanation
+## 🔧 配置说明
 
-### Tailwind CSS Configuration
-The project uses Tailwind CSS 4, supporting custom color variables:
+### Tailwind CSS 配置
+项目使用 Tailwind CSS 4，支持自定义颜色变量：
 
 ```css
 :root {
-  --primary: #1c66e5;        /* Primary color */
-  --background: #000000;     /* Background color */
-  --foreground: #ffffff;     /* Foreground color */
+  --primary: #1c66e5;        /* 主色调 */
+  --background: #000000;     /* 背景色 */
+  --foreground: #ffffff;     /* 前景色 */
 }
 ```
 
-### Component Style
-Using `class-variance-authority` to manage component style variants, supporting multiple preset styles.
+### 组件样式
+使用 `class-variance-authority` 管理组件样式变体，支持多种预设样式。
 
-## 📚 Documentation Entry
+## 📚 文档入口
 
-- **EdgeOne Pages Official Documentation**：[https://docs.edgeone.com](https://docs.edgeone.com)
-- **Next.js Documentation**：[https://nextjs.org/docs](https://nextjs.org/docs)
-- **Tailwind CSS Documentation**：[https://tailwindcss.com/docs](https://tailwindcss.com/docs)
-- **Express.js Documentation**：[https://expressjs.com](https://expressjs.com)
+- **EdgeOne Pages 官方文档**：[https://docs.edgeone.com](https://docs.edgeone.com)
+- **Next.js 文档**：[https://nextjs.org/docs](https://nextjs.org/docs)
+- **Tailwind CSS 文档**：[https://tailwindcss.com/docs](https://tailwindcss.com/docs)
+- **Express.js 文档**：[https://expressjs.com](https://expressjs.com)
 
-## 🚀 Deployment Guide
+## 🚀 部署指南
 
-### EdgeOne Pages Deployment
+### EdgeOne Pages 部署
 
-1. Push the code to a GitHub repository
-2. Create a new project in the EdgeOne Pages console
-3. Select the GitHub repository as the source
-4. Configure the build command: `npm run build`
-5. Configure the output directory: `.next`
-6. Deploy the project
+1. 将代码推送到 GitHub 仓库
+2. 在 EdgeOne Pages 控制台创建新项目
+3. 选择 GitHub 仓库作为源
+4. 配置构建命令：`npm run build`
+5. 配置输出目录：`.next`
+6. 部署项目
 
-### Node Functions Configuration
+### Node Functions 配置
 
-Create a `node-functions/` folder in the project root directory, adding an Express application:
+在项目根目录创建 `node-functions/` 文件夹，添加 Express 应用：
 
 ```javascript
 // node-functions/express/[[default]].js
@@ -145,16 +147,16 @@ export default app;
 ```
 
 
-## Deployment
+## 部署
 
-[![Deploy with EdgeOne Pages](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?from=github&template=koa-template)
+[![Deploy with EdgeOne Pages](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://console.cloud.tencent.com/edgeone/pages/new?from=github&template=koa-template)
 
 
-## 👤 Author
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+
+## 👤 作者
 
 **sxwzxc**
-
-
-## 📄 License
-
-This project uses the MIT License - see the [LICENSE](LICENSE) file for details.
