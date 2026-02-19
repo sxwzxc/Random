@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,15 @@ import {
 } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { Download, Gift, Plus, RotateCcw, X } from "lucide-react";
+
+const WHEEL_COLORS = [
+  "#dc2626", "#b91c1c", "#ef4444", "#f87171",
+  "#c084fc", "#a855f7", "#fb923c", "#f59e0b",
+];
+// Progressive deceleration: high speed → low resistance, slows gradually
+const DECEL_BASE = 0.975;
+const DECEL_RANGE = 0.02;
+const DECEL_SPEED_SCALE = 15;
 
 export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   const [pool, setPool] = useState<{
@@ -23,6 +32,9 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   const [winner, setWinner] = useState<string | null>(null);
   const [winnerPrize, setWinnerPrize] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
+  const [wheelRot, setWheelRot] = useState(0);
+  const wheelRotRef = useRef(0);
+  const wheelRafRef = useRef<number | null>(null);
 
   const loadPool = useCallback(() => {
     setPool(getLotteryPool());
@@ -31,6 +43,24 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   useEffect(() => {
     loadPool();
   }, [loadPool]);
+
+  const wheelBg = useMemo(() => {
+    if (pool.participants.length === 0)
+      return "conic-gradient(#dc2626 0deg 360deg)";
+    const step = 360 / pool.participants.length;
+    const stops = pool.participants.map((_, i) => {
+      const start = i * step;
+      const end = start + step;
+      return `${WHEEL_COLORS[i % WHEEL_COLORS.length]} ${start}deg ${end}deg`;
+    });
+    return `conic-gradient(${stops.join(", ")})`;
+  }, [pool.participants]);
+
+  useEffect(() => {
+    return () => {
+      if (wheelRafRef.current !== null) cancelAnimationFrame(wheelRafRef.current);
+    };
+  }, []);
 
   const addParticipant = () => {
     const names = input
@@ -141,6 +171,21 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
 
     setAnimating(true);
     setWinnerPrize(null);
+
+    // Spin the wheel with decreasing velocity
+    if (wheelRafRef.current !== null) cancelAnimationFrame(wheelRafRef.current);
+    let wheelVel = 30;
+    const spinTick = () => {
+      const speed = Math.abs(wheelVel);
+      wheelVel *= DECEL_BASE + DECEL_RANGE * Math.min(1, speed / DECEL_SPEED_SCALE);
+      wheelRotRef.current += wheelVel;
+      setWheelRot(wheelRotRef.current);
+      if (Math.abs(wheelVel) > 0.5) {
+        wheelRafRef.current = requestAnimationFrame(spinTick);
+      }
+    };
+    wheelRafRef.current = requestAnimationFrame(spinTick);
+
     let count = 0;
     const interval = setInterval(() => {
       setWinner(available[Math.floor(Math.random() * available.length)]);
@@ -339,6 +384,24 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
             </Button>
           )}
         </div>
+
+        {pool.participants.length > 0 && (
+          <div className="relative mx-auto w-44 h-44">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[12px] border-r-[12px] border-t-[18px] border-l-transparent border-r-transparent border-t-yellow-400" />
+            <div
+              className="w-full h-full rounded-full border-4 border-red-700 shadow-lg"
+              style={{
+                background: wheelBg,
+                transform: `rotate(${wheelRot}deg)`,
+              }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-14 h-14 rounded-full bg-gray-900 border-2 border-red-500 flex items-center justify-center">
+                <Gift className="w-6 h-6 text-red-400" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {winner && (
           <div className={cn(
