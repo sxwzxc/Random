@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Node Functions on EdgeOne Pages - Koa",
-  description: "Node Functions allow you to run code in a Node Runtime without managing servers.",
+  title: "随机万事屋 - 随机数 · 选择助手 · 运势 · 抽奖",
+  description: "随机万事屋：随机数生成、选择困难助手、今日运势、抽奖系统、抛硬币、掷骰子、随机分组，帮你做出所有随机决定。",
 };
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="zh-CN" className="dark">
       <head>
         <link rel="icon" href="/eo-logo-blue.svg" />
       </head>
