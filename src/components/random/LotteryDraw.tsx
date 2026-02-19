@@ -216,11 +216,16 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
     // Pre-select winner and compute target rotation so wheel lands on winner's segment
     const winnerIndex = Math.floor(Math.random() * available.length);
     const final = available[winnerIndex];
-    const n = available.length;
+    const wheelWinnerIndex = pool.participants.indexOf(final);
+    if (wheelWinnerIndex < 0) {
+      console.error("Lottery draw error: selected winner not found in participants", final);
+      return;
+    }
+    const n = pool.participants.length;
     const segStep = 360 / n;
-    const segMid = (winnerIndex + 0.5) * segStep; // middle of winner segment (degrees from top)
+    const targetNorm = (360 - (wheelWinnerIndex + 0.5) * segStep) % 360;
     const currentNorm = ((wheelRotRef.current % 360) + 360) % 360;
-    let extraAngle = segMid - currentNorm;
+    let extraAngle = targetNorm - currentNorm;
     if (extraAngle < 0) extraAngle += 360;
     // At least 2 full spins (720°) plus the extra angle to reach winner's segment
     const targetRot = wheelRotRef.current + 720 + extraAngle;
