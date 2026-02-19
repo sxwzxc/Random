@@ -10,24 +10,28 @@ import {
   clearLotteryPool,
 } from "@/lib/storage";
 import { Download, Gift, Plus, RotateCcw, X } from "lucide-react";
+import { HISTORY_TYPES, type Locale } from "@/lib/i18n";
 
 const WHEEL_COLORS = [
   "#dc2626", "#b91c1c", "#ef4444", "#f87171",
   "#c084fc", "#a855f7", "#fb923c", "#f59e0b",
 ];
-// Proportional easing factor for wheel-stop-at-target animation
 const EASE_FACTOR = 0.03;
 const MIN_SPEED = 0.3;
-const STOP_THRESHOLD = 1; // degrees remaining before snapping to target
+const STOP_THRESHOLD = 1;
 
-export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
+export default function LotteryDraw({ onUpdate, locale }: { onUpdate: () => void; locale: Locale }) {
   const [pool, setPool] = useState<{
     participants: string[];
     drawn: string[];
     prizeWinners: Record<string, string[]>;
   }>({ participants: [], drawn: [], prizeWinners: {} });
   const [input, setInput] = useState("");
-  const [prizeInput, setPrizeInput] = useState("一等奖:1\n二等奖:2\n三等奖:3");
+  const [prizeInput, setPrizeInput] = useState(() =>
+    locale === "zh"
+      ? "一等奖:1\n二等奖:2\n三等奖:3"
+      : "First Prize:1\nSecond Prize:2\nThird Prize:3"
+  );
   const [winner, setWinner] = useState<string | null>(null);
   const [winnerPrize, setWinnerPrize] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
@@ -35,6 +39,53 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   const wheelRotRef = useRef(0);
   const wheelRafRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const text = {
+    zh: {
+      title: "抽奖系统",
+      addLabel: "添加参与者（逗号分隔）",
+      addPlaceholder: "张三, 李四, 王五...",
+      prizeLabel: "奖项设置（每行 奖项:人数）",
+      prizePlaceholder: "一等奖:1",
+      participants: "参与者",
+      available: "可抽",
+      drawing: "抽奖中...",
+      done: "全部已抽完",
+      draw: "🎉 开始抽奖",
+      drawByPrize: "按奖项抽取",
+      clear: "清空",
+      congrats: "🎊 恭喜中奖",
+      drawn: "已抽出",
+      winners: "🏆 中奖名单",
+      exportHeader: "奖项,名单",
+      doneByPrize: "按奖项抽奖完成",
+      detailPrize: "奖项",
+      detailParticipants: "参与者",
+      detailDrawn: "已抽",
+    },
+    en: {
+      title: "Lottery",
+      addLabel: "Add participants (comma-separated)",
+      addPlaceholder: "Alice, Bob, Carol...",
+      prizeLabel: "Prize rules (one per line: Prize:Count)",
+      prizePlaceholder: "First Prize:1",
+      participants: "Participants",
+      available: "available",
+      drawing: "Drawing...",
+      done: "All drawn",
+      draw: "🎉 Draw Winner",
+      drawByPrize: "Draw by Prize",
+      clear: "Clear",
+      congrats: "🎊 Congratulations",
+      drawn: "Drawn",
+      winners: "🏆 Winner List",
+      exportHeader: "Prize,Winners",
+      doneByPrize: "Prize draw completed",
+      detailPrize: "Prize",
+      detailParticipants: "Participants",
+      detailDrawn: "Drawn",
+    },
+  }[locale];
 
   const loadPool = useCallback(() => {
     setPool(getLotteryPool());
@@ -44,13 +95,12 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
     loadPool();
   }, [loadPool]);
 
-  // Draw the wheel on the canvas whenever participants or rotation changes
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const size = canvas.width; // 352px canvas → displayed at 176px via w-full h-full (2× for HiDPI)
+    const size = canvas.width;
     const cx = size / 2;
     const cy = size / 2;
     const r = cx - 8;
@@ -64,13 +114,11 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
       return;
     }
     const step = (2 * Math.PI) / n;
-    // Start from top (12 o'clock = -π/2 in canvas) and add rotation
     const rotRad = (wheelRot * Math.PI) / 180 - Math.PI / 2;
     for (let i = 0; i < n; i++) {
       const startAngle = rotRad + i * step;
       const endAngle = startAngle + step;
       const midAngle = startAngle + step / 2;
-      // Draw segment
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.arc(cx, cy, r, startAngle, endAngle);
@@ -80,7 +128,6 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
       ctx.strokeStyle = "#111827";
       ctx.lineWidth = 1;
       ctx.stroke();
-      // Draw participant name
       const maxChars = n > 10 ? 3 : n > 6 ? 4 : 5;
       const displayName = pool.participants[i].length > maxChars
         ? pool.participants[i].substring(0, maxChars)
@@ -137,8 +184,8 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
     saveLotteryPool(next);
   };
 
-  const drawByPrizes = () => {
-    const prizeConfigs = prizeInput
+  const parsePrizeConfigs = () => {
+    return prizeInput
       .split(/\n|,|，/)
       .map((line) => line.trim())
       .filter(Boolean)
@@ -147,7 +194,10 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
         return { name, count: Number.parseInt(count || "0", 10) };
       })
       .filter((item) => item.name && Number.isFinite(item.count) && item.count > 0);
+  };
 
+  const drawByPrizes = () => {
+    const prizeConfigs = parsePrizeConfigs();
     if (prizeConfigs.length === 0) return;
     const nextDrawn = [...pool.drawn];
     const nextPrizeWinners: Record<string, string[]> = { ...pool.prizeWinners };
@@ -181,13 +231,13 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
     saveLotteryPool(next);
     const prizeResult = Object.entries(nextPrizeWinners)
       .filter(([, winners]) => winners.length > 0)
-      .map(([prize, winners]) => `${prize}: ${winners.join("、")}`)
-      .join("；");
+      .map(([prize, winners]) => `${prize}: ${winners.join(locale === "zh" ? "、" : ", ")}`)
+      .join(locale === "zh" ? "；" : "; ");
     setWinner(prizeResult);
     addHistory({
-      type: "抽奖",
-      result: "按奖项抽奖完成",
-      detail: `已抽出 ${next.drawn.length}/${next.participants.length} 人`,
+      type: HISTORY_TYPES.lottery[locale],
+      result: text.doneByPrize,
+      detail: `${text.detailDrawn} ${next.drawn.length}/${next.participants.length}`,
     });
     onUpdate();
   };
@@ -198,22 +248,11 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
     );
     if (available.length === 0) return;
 
-    // Determine the next unfilled prize slot
-    const prizeConfigs = prizeInput
-      .split(/\n|,|，/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [name, count] = line.split(/[:：]/).map((s) => s.trim());
-        return { name, count: Number.parseInt(count || "0", 10) };
-      })
-      .filter((item) => item.name && Number.isFinite(item.count) && item.count > 0);
-
+    const prizeConfigs = parsePrizeConfigs();
     const nextPrize = prizeConfigs.find(
       (pc) => (pool.prizeWinners[pc.name]?.length || 0) < pc.count
     );
 
-    // Pre-select winner and compute target rotation so wheel lands on winner's segment
     const winnerIndex = Math.floor(Math.random() * available.length);
     const final = available[winnerIndex];
     const wheelWinnerIndex = pool.participants.indexOf(final);
@@ -227,7 +266,6 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
     const currentNorm = ((wheelRotRef.current % 360) + 360) % 360;
     let extraAngle = targetNorm - currentNorm;
     if (extraAngle < 0) extraAngle += 360;
-    // At least 2 full spins (720°) plus the extra angle to reach winner's segment
     const targetRot = wheelRotRef.current + 720 + extraAngle;
 
     setAnimating(true);
@@ -238,10 +276,8 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
     const spinTick = () => {
       const remaining = targetRot - wheelRotRef.current;
       if (remaining <= STOP_THRESHOLD) {
-        // Snap to exact target so the pointer lands on winner's segment
         wheelRotRef.current = targetRot;
         setWheelRot(targetRot);
-        // Wheel has stopped – now reveal the winner
         const nextDrawn = [...pool.drawn, final];
         const nextPrizeWinners = { ...pool.prizeWinners };
         if (nextPrize) {
@@ -261,15 +297,14 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
         setWinnerPrize(nextPrize?.name || null);
         setAnimating(false);
         addHistory({
-          type: "抽奖",
+          type: HISTORY_TYPES.lottery[locale],
           result: final,
           detail: nextPrize
-            ? `奖项: ${nextPrize.name}, 参与者: ${pool.participants.length}人`
-            : `参与者: ${pool.participants.length}人, 已抽: ${nextDrawn.length}人`,
+            ? `${text.detailPrize}: ${nextPrize.name}, ${text.detailParticipants}: ${pool.participants.length}`
+            : `${text.detailParticipants}: ${pool.participants.length}, ${text.detailDrawn}: ${nextDrawn.length}`,
         });
         onUpdate();
       } else {
-        // Proportional easing: fast start, slow near target
         const speed = Math.max(MIN_SPEED, remaining * EASE_FACTOR);
         wheelRotRef.current += speed;
         setWheelRot(wheelRotRef.current);
@@ -299,7 +334,7 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
       .filter(([, winners]) => winners.length > 0)
       .map(([prize, winners]) => `${prize},${winners.join(",")}`);
     if (lines.length === 0) return;
-    const blob = new Blob([`\uFEFF奖项,名单\n${lines.join("\n")}`], {
+    const blob = new Blob([`\uFEFF${text.exportHeader}\n${lines.join("\n")}`], {
       type: "text/csv;charset=utf-8;",
     });
     const url = URL.createObjectURL(blob);
@@ -317,26 +352,24 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   );
 
   return (
-    <Card className="bg-gray-900 border-gray-700">
+    <Card className="bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-700">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-white">
-          <Gift className="w-5 h-5 text-red-400" />
-          抽奖系统
+        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+          <Gift className="w-5 h-5 text-red-500 dark:text-red-400" />
+          {text.title}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm text-gray-400">
-            添加参与者（逗号分隔）
-          </label>
+          <label className="text-sm text-gray-600 dark:text-gray-400">{text.addLabel}</label>
           <div className="flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addParticipant()}
-              placeholder="张三, 李四, 王五..."
-              className="flex-1 bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder={text.addPlaceholder}
+              className="flex-1 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
             />
             <Button
               onClick={addParticipant}
@@ -348,20 +381,20 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm text-gray-400">奖项设置（每行 奖项:人数）</label>
+          <label className="text-sm text-gray-600 dark:text-gray-400">{text.prizeLabel}</label>
           <textarea
             value={prizeInput}
             onChange={(e) => setPrizeInput(e.target.value)}
-            placeholder="一等奖:1"
+            placeholder={text.prizePlaceholder}
             rows={3}
-            className="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
           />
         </div>
 
         {pool.participants.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm text-gray-400">
-              参与者 ({available.length}/{pool.participants.length} 可抽)
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {text.participants} ({available.length}/{pool.participants.length} {text.available})
             </p>
             <div className="flex flex-wrap gap-2">
               {pool.participants.map((p) => {
@@ -371,15 +404,15 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
                     key={p}
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm ${
                       isDrawn
-                        ? "bg-gray-700 text-gray-500 line-through"
-                        : "bg-gray-800 text-white"
+                        ? "bg-gray-300 dark:bg-gray-700 text-gray-500 line-through"
+                        : "bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white"
                     }`}
                   >
                     {p}
                     {!isDrawn && (
                       <button
                         onClick={() => removeParticipant(p)}
-                        className="text-gray-400 hover:text-red-400 cursor-pointer"
+                        className="text-gray-500 dark:text-gray-400 hover:text-red-400 cursor-pointer"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -398,24 +431,24 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
             className="flex-1 min-w-[120px] bg-red-600 hover:bg-red-700 text-white cursor-pointer"
           >
             {animating
-              ? "抽奖中..."
+              ? text.drawing
               : available.length === 0
-              ? "全部已抽完"
-              : "🎉 开始抽奖"}
+              ? text.done
+              : text.draw}
           </Button>
           <Button
             onClick={drawByPrizes}
             disabled={available.length === 0}
             variant="outline"
-            className="flex-1 min-w-[100px] border-gray-600 text-gray-300 hover:bg-gray-800 cursor-pointer"
+            className="flex-1 min-w-[100px] border-gray-400 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
           >
-            按奖项抽取
+            {text.drawByPrize}
           </Button>
           {pool.drawn.length > 0 && (
             <Button
               onClick={resetDraw}
               variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-800 cursor-pointer"
+              className="border-gray-400 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
             </Button>
@@ -424,16 +457,16 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
             <Button
               onClick={clearAll}
               variant="outline"
-              className="border-gray-600 text-red-400 hover:bg-gray-800 cursor-pointer"
+              className="border-gray-400 dark:border-gray-600 text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
             >
-              清空
+              {text.clear}
             </Button>
           )}
           {Object.values(pool.prizeWinners).some((winners) => winners.length > 0) && (
             <Button
               onClick={exportWinners}
               variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-800 cursor-pointer"
+              className="border-gray-400 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
             >
               <Download className="w-4 h-4" />
             </Button>
@@ -447,24 +480,22 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
               ref={canvasRef}
               width={352}
               height={352}
-              className="w-full h-full rounded-full border-4 border-red-700 shadow-lg"
+              className="w-full h-full rounded-full border-4 border-red-600 dark:border-red-700 shadow-lg"
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-14 h-14 rounded-full bg-gray-900 border-2 border-red-500 flex items-center justify-center">
-                <Gift className="w-6 h-6 text-red-400" />
+              <div className="w-14 h-14 rounded-full bg-white dark:bg-gray-900 border-2 border-red-500 flex items-center justify-center">
+                <Gift className="w-6 h-6 text-red-500 dark:text-red-400" />
               </div>
             </div>
           </div>
         )}
 
         {winner && !animating && (
-          <div className="text-center py-6 rounded-lg border bg-gradient-to-b from-gray-800 to-red-950 border-red-800">
-            <p className="text-sm text-gray-400 mb-2">🎊 恭喜中奖</p>
-            <p className="text-4xl font-bold text-red-400">
-              {winner}
-            </p>
+          <div className="text-center py-6 rounded-lg border bg-gradient-to-b from-gray-100 to-red-100 dark:from-gray-800 dark:to-red-950 border-red-300 dark:border-red-800">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{text.congrats}</p>
+            <p className="text-4xl font-bold text-red-500 dark:text-red-400">{winner}</p>
             {winnerPrize && (
-              <span className="inline-block mt-2 px-3 py-1 bg-red-700/50 text-red-200 rounded-full text-sm font-medium">
+              <span className="inline-block mt-2 px-3 py-1 bg-red-700/50 text-red-100 dark:text-red-200 rounded-full text-sm font-medium">
                 🏆 {winnerPrize}
               </span>
             )}
@@ -473,20 +504,20 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
 
         {pool.drawn.length > 0 && (
           <div className="text-xs text-gray-500">
-            已抽出: {pool.drawn.join(", ")}
+            {text.drawn}: {pool.drawn.join(", ")}
           </div>
         )}
         {Object.entries(pool.prizeWinners).some(([, winners]) => winners.length > 0) && (
-          <div className="space-y-2 bg-gray-800 rounded-lg p-3">
-            <p className="text-xs text-gray-400 font-medium">🏆 中奖名单</p>
+          <div className="space-y-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
+            <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">{text.winners}</p>
             {Object.entries(pool.prizeWinners).map(
               ([prize, winners]) =>
                 winners.length > 0 && (
                   <div key={prize} className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-yellow-400 font-medium shrink-0">{prize}:</span>
+                    <span className="text-sm text-yellow-600 dark:text-yellow-400 font-medium shrink-0">{prize}:</span>
                     <div className="flex flex-wrap gap-1">
                       {winners.map((w) => (
-                        <span key={w} className="px-2 py-0.5 bg-red-700/40 text-red-200 rounded text-sm">
+                        <span key={w} className="px-2 py-0.5 bg-red-200/60 dark:bg-red-700/40 text-red-700 dark:text-red-200 rounded text-sm">
                           {w}
                         </span>
                       ))}
