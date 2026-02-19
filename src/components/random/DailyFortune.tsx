@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { addHistory } from "@/lib/storage";
-import { Star } from "lucide-react";
+import { Star, User } from "lucide-react";
 
 const FORTUNES = [
   { level: "大吉", color: "text-yellow-400", emoji: "🌟", advice: "万事顺遂，宜大胆行动！" },
@@ -24,9 +24,9 @@ const ASPECTS = [
   { name: "学习运", icon: "📚" },
 ];
 
-function getDailyFortune() {
+function getDailyFortune(name: string = "") {
   const today = new Date().toDateString();
-  const key = `fortune_${today}`;
+  const key = name ? `fortune_${today}_${encodeURIComponent(name)}` : `fortune_${today}`;
   if (typeof window !== "undefined") {
     const cached = localStorage.getItem(key);
     if (cached) return JSON.parse(cached);
@@ -41,38 +41,82 @@ function getDailyFortune() {
   const luckyColors = ["红色", "蓝色", "绿色", "黄色", "紫色", "白色", "黑色", "橙色"];
   const luckyColor = luckyColors[Math.floor(Math.random() * luckyColors.length)];
 
-  const result = { fortune, aspects, luckyNumber, luckyColor, date: today };
+  const result = { fortune, aspects, luckyNumber, luckyColor, date: today, name };
   if (typeof window !== "undefined") {
     localStorage.setItem(key, JSON.stringify(result));
   }
   return result;
 }
 
+const TESTED_KEY_PREFIX = "fortune_tested_";
+
+function getTestedNicknames(): string[] {
+  if (typeof window === "undefined") return [];
+  const today = new Date().toDateString();
+  const data = localStorage.getItem(`${TESTED_KEY_PREFIX}${today}`);
+  return data ? JSON.parse(data) : [];
+}
+
+function saveTestedNickname(name: string) {
+  const today = new Date().toDateString();
+  const key = `${TESTED_KEY_PREFIX}${today}`;
+  const list = getTestedNicknames();
+  if (!list.includes(name)) {
+    list.push(name);
+    localStorage.setItem(key, JSON.stringify(list));
+  }
+}
+
 export default function DailyFortune({ onUpdate }: { onUpdate: () => void }) {
   const [fortune, setFortune] = useState<ReturnType<typeof getDailyFortune> | null>(null);
   const [revealed, setRevealed] = useState(false);
-
-  const handleReveal = useCallback(() => {
-    const f = getDailyFortune();
-    setFortune(f);
-    setRevealed(true);
-    addHistory({
-      type: "今日运势",
-      result: f.fortune.level,
-      detail: `幸运数字: ${f.luckyNumber}, 幸运颜色: ${f.luckyColor}`,
-    });
-    onUpdate();
-  }, [onUpdate]);
+  const [nickname, setNickname] = useState("");
+  const [currentName, setCurrentName] = useState("");
+  const [testedToday, setTestedToday] = useState<string[]>([]);
 
   useEffect(() => {
+    const tested = getTestedNicknames();
+    setTestedToday(tested);
+    // Auto-show if default fortune was already revealed today
     const today = new Date().toDateString();
-    const key = `fortune_${today}`;
-    const cached = localStorage.getItem(key);
+    const cached = localStorage.getItem(`fortune_${today}`);
     if (cached) {
       setFortune(JSON.parse(cached));
       setRevealed(true);
+      setCurrentName("");
     }
   }, []);
+
+  const handleReveal = useCallback(() => {
+    const name = nickname.trim();
+    const f = getDailyFortune(name);
+    setFortune(f);
+    setRevealed(true);
+    setCurrentName(name);
+    saveTestedNickname(name);
+    setTestedToday(getTestedNicknames());
+    addHistory({
+      type: "今日运势",
+      result: `${name ? name + " · " : ""}${f.fortune.level}`,
+      detail: `幸运数字: ${f.luckyNumber}, 幸运颜色: ${f.luckyColor}`,
+    });
+    onUpdate();
+  }, [onUpdate, nickname]);
+
+  const switchTo = (name: string) => {
+    const f = getDailyFortune(name);
+    setFortune(f);
+    setRevealed(true);
+    setCurrentName(name);
+    setNickname(name);
+  };
+
+  const handleNew = () => {
+    setRevealed(false);
+    setFortune(null);
+    setNickname("");
+    setCurrentName("");
+  };
 
   return (
     <Card className="bg-gray-900 border-gray-700">
@@ -83,18 +127,57 @@ export default function DailyFortune({ onUpdate }: { onUpdate: () => void }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!revealed ? (
-          <div className="text-center py-6">
-            <p className="text-gray-400 mb-4">点击下方按钮揭晓今日运势</p>
-            <Button
-              onClick={handleReveal}
-              className="bg-yellow-600 hover:bg-yellow-700 text-white px-8 cursor-pointer"
-            >
-              🔮 揭晓运势
-            </Button>
+        {/* Nickname input */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleReveal()}
+              placeholder="输入昵称（可留空）"
+              className="w-full bg-gray-800 border border-gray-600 rounded-md pl-9 pr-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            />
           </div>
-        ) : fortune ? (
+          <Button
+            onClick={handleReveal}
+            className="bg-yellow-600 hover:bg-yellow-700 text-white cursor-pointer shrink-0"
+          >
+            🔮 揭晓运势
+          </Button>
+        </div>
+
+        {/* Tested nicknames today */}
+        {testedToday.length > 0 && (testedToday.length > 1 || testedToday[0] !== currentName) ? (
+          <div className="space-y-1">
+            <p className="text-xs text-gray-500">今日已测：</p>
+            <div className="flex flex-wrap gap-2">
+              {testedToday.map((name) => (
+                <button
+                  key={name}
+                  onClick={() => switchTo(name)}
+                  className={`px-2 py-1 rounded text-xs cursor-pointer transition-colors ${
+                    name === currentName
+                      ? "bg-yellow-600 text-white"
+                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  {name || "匿名"}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Fortune result */}
+        {revealed && fortune ? (
           <div className="space-y-4">
+            {currentName && (
+              <p className="text-center text-sm text-gray-400">
+                <span className="text-yellow-400 font-medium">{currentName}</span> 的今日运势
+              </p>
+            )}
             <div className="text-center py-4 bg-gray-800 rounded-lg">
               <span className="text-4xl mb-2 block">{fortune.fortune.emoji}</span>
               <p className={`text-3xl font-bold ${fortune.fortune.color}`}>
@@ -126,7 +209,19 @@ export default function DailyFortune({ onUpdate }: { onUpdate: () => void }) {
               </span>
             </div>
 
-            <p className="text-xs text-gray-500 text-center">每日运势每天重置一次</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">每日运势每天重置一次</p>
+              <button
+                onClick={handleNew}
+                className="text-xs text-gray-500 hover:text-yellow-400 cursor-pointer transition-colors"
+              >
+                测试新昵称 →
+              </button>
+            </div>
+          </div>
+        ) : !revealed ? (
+          <div className="text-center py-4">
+            <p className="text-gray-500 text-sm">输入昵称后点击揭晓，支持多人测试</p>
           </div>
         ) : null}
       </CardContent>

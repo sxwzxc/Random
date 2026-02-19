@@ -14,7 +14,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className="dark">
       <head>
-        <link rel="icon" href="/eo-logo-blue.svg" />
+        <link rel="icon" href="/globe.svg" />
       </head>
       <body className="antialiased">
         {children}

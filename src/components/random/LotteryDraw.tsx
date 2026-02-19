@@ -9,6 +9,7 @@ import {
   saveLotteryPool,
   clearLotteryPool,
 } from "@/lib/storage";
+import { cn } from "@/lib/utils";
 import { Download, Gift, Plus, RotateCcw, X } from "lucide-react";
 
 export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
@@ -20,6 +21,7 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   const [input, setInput] = useState("");
   const [prizeInput, setPrizeInput] = useState("一等奖:1\n二等奖:2\n三等奖:3");
   const [winner, setWinner] = useState<string | null>(null);
+  const [winnerPrize, setWinnerPrize] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
 
   const loadPool = useCallback(() => {
@@ -121,7 +123,24 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
       (p) => !pool.drawn.includes(p)
     );
     if (available.length === 0) return;
+
+    // Determine the next unfilled prize slot
+    const prizeConfigs = prizeInput
+      .split(/\n|,|，/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [name, count] = line.split(/[:：]/).map((s) => s.trim());
+        return { name, count: Number.parseInt(count || "0", 10) };
+      })
+      .filter((item) => item.name && Number.isFinite(item.count) && item.count > 0);
+
+    const nextPrize = prizeConfigs.find(
+      (pc) => (pool.prizeWinners[pc.name]?.length || 0) < pc.count
+    );
+
     setAnimating(true);
+    setWinnerPrize(null);
     let count = 0;
     const interval = setInterval(() => {
       setWinner(available[Math.floor(Math.random() * available.length)]);
@@ -131,17 +150,29 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
         const final =
           available[Math.floor(Math.random() * available.length)];
         setWinner(final);
+        setWinnerPrize(nextPrize?.name || null);
         setAnimating(false);
+        const nextDrawn = [...pool.drawn, final];
+        const nextPrizeWinners = { ...pool.prizeWinners };
+        if (nextPrize) {
+          nextPrizeWinners[nextPrize.name] = [
+            ...(nextPrizeWinners[nextPrize.name] || []),
+            final,
+          ];
+        }
         const next = {
           ...pool,
-          drawn: [...pool.drawn, final],
+          drawn: nextDrawn,
+          prizeWinners: nextPrizeWinners,
         };
         setPool(next);
         saveLotteryPool(next);
         addHistory({
           type: "抽奖",
           result: final,
-          detail: `参与者: ${pool.participants.length}人, 已抽: ${next.drawn.length}人`,
+          detail: nextPrize
+            ? `奖项: ${nextPrize.name}, 参与者: ${pool.participants.length}人`
+            : `参与者: ${pool.participants.length}人, 已抽: ${nextDrawn.length}人`,
         });
         onUpdate();
       }
@@ -153,12 +184,14 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
     setPool(next);
     saveLotteryPool(next);
     setWinner(null);
+    setWinnerPrize(null);
   };
 
   const clearAll = () => {
     clearLotteryPool();
     setPool({ participants: [], drawn: [], prizeWinners: {} });
     setWinner(null);
+    setWinnerPrize(null);
   };
 
   const exportWinners = () => {
@@ -258,11 +291,11 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={draw}
             disabled={animating || available.length === 0}
-            className="flex-1 bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+            className="flex-1 min-w-[120px] bg-red-600 hover:bg-red-700 text-white cursor-pointer"
           >
             {animating
               ? "抽奖中..."
@@ -274,7 +307,7 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
             onClick={drawByPrizes}
             disabled={available.length === 0}
             variant="outline"
-            className="border-gray-600 text-gray-300 hover:bg-gray-800 cursor-pointer"
+            className="flex-1 min-w-[100px] border-gray-600 text-gray-300 hover:bg-gray-800 cursor-pointer"
           >
             按奖项抽取
           </Button>
@@ -308,8 +341,13 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
         </div>
 
         {winner && (
-          <div className="text-center py-6 bg-gray-800 rounded-lg">
-            <p className="text-sm text-gray-400 mb-1">🎊 恭喜中奖</p>
+          <div className={cn(
+            "text-center py-6 rounded-lg border",
+            animating
+              ? "bg-gray-800 border-gray-700"
+              : "bg-gradient-to-b from-gray-800 to-red-950 border-red-800"
+          )}>
+            <p className="text-sm text-gray-400 mb-2">🎊 恭喜中奖</p>
             <p
               className={`text-4xl font-bold text-red-400 transition-all ${
                 animating ? "opacity-50" : "opacity-100"
@@ -317,6 +355,11 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
             >
               {winner}
             </p>
+            {!animating && winnerPrize && (
+              <span className="inline-block mt-2 px-3 py-1 bg-red-700/50 text-red-200 rounded-full text-sm font-medium">
+                🏆 {winnerPrize}
+              </span>
+            )}
           </div>
         )}
 
@@ -326,12 +369,20 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
           </div>
         )}
         {Object.entries(pool.prizeWinners).some(([, winners]) => winners.length > 0) && (
-          <div className="space-y-1 text-sm text-gray-300">
+          <div className="space-y-2 bg-gray-800 rounded-lg p-3">
+            <p className="text-xs text-gray-400 font-medium">🏆 中奖名单</p>
             {Object.entries(pool.prizeWinners).map(
               ([prize, winners]) =>
                 winners.length > 0 && (
-                  <div key={prize}>
-                    {prize}: {winners.join("、")}
+                  <div key={prize} className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-yellow-400 font-medium shrink-0">{prize}:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {winners.map((w) => (
+                        <span key={w} className="px-2 py-0.5 bg-red-700/40 text-red-200 rounded text-sm">
+                          {w}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )
             )}
