@@ -150,6 +150,11 @@ export default app;
 [![Deploy with EdgeOne Pages](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?from=github&template=koa-template)
 
 
+## 👤 Author
+
+**sxwzxc**
+
+
 ## 📄 License
 
-This project uses the MIT License - see the [LICENSE](https://github.com/github/choosealicense.com/blob/gh-pages/_licenses/mit.txt) file for details.
+This project uses the MIT License - see the [LICENSE](LICENSE) file for details.
