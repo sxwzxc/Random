@@ -13,7 +13,7 @@ const FORTUNES = {
     { level: "吉", color: "text-green-400", emoji: "✨", advice: "运势不错，适合尝试新事物。" },
     { level: "中吉", color: "text-blue-400", emoji: "🌤", advice: "平稳顺利，保持好心态。" },
     { level: "小吉", color: "text-cyan-400", emoji: "🌈", advice: "有小惊喜，注意身边的美好。" },
-    { level: "末吉", color: "text-gray-300", emoji: "🌥", advice: "普通的一天，平淡即是福。" },
+    { level: "末吉", color: "text-gray-500 dark:text-gray-300", emoji: "🌥", advice: "普通的一天，平淡即是福。" },
     { level: "凶", color: "text-orange-400", emoji: "⛅", advice: "小心谨慎，避免冲动决定。" },
     { level: "大凶", color: "text-red-400", emoji: "🌧", advice: "低调行事，今日不宜冒险。" },
   ],
@@ -22,7 +22,7 @@ const FORTUNES = {
     { level: "Good", color: "text-green-400", emoji: "✨", advice: "Luck is on your side; try something new." },
     { level: "Steady", color: "text-blue-400", emoji: "🌤", advice: "Things are stable today—keep calm." },
     { level: "Small Luck", color: "text-cyan-400", emoji: "🌈", advice: "Small surprises may appear around you." },
-    { level: "Average", color: "text-gray-300", emoji: "🌥", advice: "A plain day can still be a good day." },
+    { level: "Average", color: "text-gray-500 dark:text-gray-300", emoji: "🌥", advice: "A plain day can still be a good day." },
     { level: "Caution", color: "text-orange-400", emoji: "⛅", advice: "Stay careful and avoid impulsive choices." },
     { level: "Challenging", color: "text-red-400", emoji: "🌧", advice: "Keep a low profile and avoid risks today." },
   ],
@@ -185,7 +185,7 @@ export default function DailyFortune({ onUpdate, locale }: { onUpdate: () => voi
               onChange={(e) => setNickname(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleReveal()}
               placeholder={text.placeholder}
-              className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md pl-9 pr-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md pl-9 pr-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
             />
           </div>
           <Button
