@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,17 +9,16 @@ import {
   saveLotteryPool,
   clearLotteryPool,
 } from "@/lib/storage";
-import { cn } from "@/lib/utils";
 import { Download, Gift, Plus, RotateCcw, X } from "lucide-react";
 
 const WHEEL_COLORS = [
   "#dc2626", "#b91c1c", "#ef4444", "#f87171",
   "#c084fc", "#a855f7", "#fb923c", "#f59e0b",
 ];
-// Progressive deceleration: high speed → low resistance, slows gradually
-const DECEL_BASE = 0.975;
-const DECEL_RANGE = 0.02;
-const DECEL_SPEED_SCALE = 15;
+// Proportional easing factor for wheel-stop-at-target animation
+const EASE_FACTOR = 0.03;
+const MIN_SPEED = 0.3;
+const STOP_THRESHOLD = 1; // degrees remaining before snapping to target
 
 export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   const [pool, setPool] = useState<{
@@ -35,6 +34,7 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
   const [wheelRot, setWheelRot] = useState(0);
   const wheelRotRef = useRef(0);
   const wheelRafRef = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const loadPool = useCallback(() => {
     setPool(getLotteryPool());
@@ -44,17 +44,61 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
     loadPool();
   }, [loadPool]);
 
-  const wheelBg = useMemo(() => {
-    if (pool.participants.length === 0)
-      return "conic-gradient(#dc2626 0deg 360deg)";
-    const step = 360 / pool.participants.length;
-    const stops = pool.participants.map((_, i) => {
-      const start = i * step;
-      const end = start + step;
-      return `${WHEEL_COLORS[i % WHEEL_COLORS.length]} ${start}deg ${end}deg`;
-    });
-    return `conic-gradient(${stops.join(", ")})`;
-  }, [pool.participants]);
+  // Draw the wheel on the canvas whenever participants or rotation changes
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const size = canvas.width; // 352px canvas → displayed at 176px via w-full h-full (2× for HiDPI)
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = cx - 8;
+    const n = pool.participants.length;
+    ctx.clearRect(0, 0, size, size);
+    if (n === 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+      ctx.fillStyle = "#dc2626";
+      ctx.fill();
+      return;
+    }
+    const step = (2 * Math.PI) / n;
+    // Start from top (12 o'clock = -π/2 in canvas) and add rotation
+    const rotRad = (wheelRot * Math.PI) / 180 - Math.PI / 2;
+    for (let i = 0; i < n; i++) {
+      const startAngle = rotRad + i * step;
+      const endAngle = startAngle + step;
+      const midAngle = startAngle + step / 2;
+      // Draw segment
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+      ctx.fill();
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // Draw participant name
+      const maxChars = n > 10 ? 3 : n > 6 ? 4 : 5;
+      const displayName = pool.participants[i].length > maxChars
+        ? pool.participants[i].substring(0, maxChars)
+        : pool.participants[i];
+      const fontSize = Math.max(16, Math.min(28, (r * 1.5) / n));
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(midAngle);
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(0,0,0,0.6)";
+      ctx.shadowBlur = 3;
+      ctx.fillStyle = "white";
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.fillText(displayName, r - 12, 0);
+      ctx.restore();
+    }
+  }, [pool.participants, wheelRot]);
 
   useEffect(() => {
     return () => {
@@ -169,34 +213,30 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
       (pc) => (pool.prizeWinners[pc.name]?.length || 0) < pc.count
     );
 
+    // Pre-select winner and compute target rotation so wheel lands on winner's segment
+    const winnerIndex = Math.floor(Math.random() * available.length);
+    const final = available[winnerIndex];
+    const n = available.length;
+    const segStep = 360 / n;
+    const segMid = (winnerIndex + 0.5) * segStep; // middle of winner segment (degrees from top)
+    const currentNorm = ((wheelRotRef.current % 360) + 360) % 360;
+    let extraAngle = segMid - currentNorm;
+    if (extraAngle < 0) extraAngle += 360;
+    // At least 2 full spins (720°) plus the extra angle to reach winner's segment
+    const targetRot = wheelRotRef.current + 720 + extraAngle;
+
     setAnimating(true);
+    setWinner(null);
     setWinnerPrize(null);
 
-    // Spin the wheel with decreasing velocity
     if (wheelRafRef.current !== null) cancelAnimationFrame(wheelRafRef.current);
-    let wheelVel = 30;
     const spinTick = () => {
-      const speed = Math.abs(wheelVel);
-      wheelVel *= DECEL_BASE + DECEL_RANGE * Math.min(1, speed / DECEL_SPEED_SCALE);
-      wheelRotRef.current += wheelVel;
-      setWheelRot(wheelRotRef.current);
-      if (Math.abs(wheelVel) > 0.5) {
-        wheelRafRef.current = requestAnimationFrame(spinTick);
-      }
-    };
-    wheelRafRef.current = requestAnimationFrame(spinTick);
-
-    let count = 0;
-    const interval = setInterval(() => {
-      setWinner(available[Math.floor(Math.random() * available.length)]);
-      count++;
-      if (count > 15) {
-        clearInterval(interval);
-        const final =
-          available[Math.floor(Math.random() * available.length)];
-        setWinner(final);
-        setWinnerPrize(nextPrize?.name || null);
-        setAnimating(false);
+      const remaining = targetRot - wheelRotRef.current;
+      if (remaining <= STOP_THRESHOLD) {
+        // Snap to exact target so the pointer lands on winner's segment
+        wheelRotRef.current = targetRot;
+        setWheelRot(targetRot);
+        // Wheel has stopped – now reveal the winner
         const nextDrawn = [...pool.drawn, final];
         const nextPrizeWinners = { ...pool.prizeWinners };
         if (nextPrize) {
@@ -212,6 +252,9 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
         };
         setPool(next);
         saveLotteryPool(next);
+        setWinner(final);
+        setWinnerPrize(nextPrize?.name || null);
+        setAnimating(false);
         addHistory({
           type: "抽奖",
           result: final,
@@ -220,8 +263,15 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
             : `参与者: ${pool.participants.length}人, 已抽: ${nextDrawn.length}人`,
         });
         onUpdate();
+      } else {
+        // Proportional easing: fast start, slow near target
+        const speed = Math.max(MIN_SPEED, remaining * EASE_FACTOR);
+        wheelRotRef.current += speed;
+        setWheelRot(wheelRotRef.current);
+        wheelRafRef.current = requestAnimationFrame(spinTick);
       }
-    }, 80);
+    };
+    wheelRafRef.current = requestAnimationFrame(spinTick);
   };
 
   const resetDraw = () => {
@@ -388,12 +438,11 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
         {pool.participants.length > 0 && (
           <div className="relative mx-auto w-44 h-44">
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[12px] border-r-[12px] border-t-[18px] border-l-transparent border-r-transparent border-t-yellow-400" />
-            <div
+            <canvas
+              ref={canvasRef}
+              width={352}
+              height={352}
               className="w-full h-full rounded-full border-4 border-red-700 shadow-lg"
-              style={{
-                background: wheelBg,
-                transform: `rotate(${wheelRot}deg)`,
-              }}
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-14 h-14 rounded-full bg-gray-900 border-2 border-red-500 flex items-center justify-center">
@@ -403,22 +452,13 @@ export default function LotteryDraw({ onUpdate }: { onUpdate: () => void }) {
           </div>
         )}
 
-        {winner && (
-          <div className={cn(
-            "text-center py-6 rounded-lg border",
-            animating
-              ? "bg-gray-800 border-gray-700"
-              : "bg-gradient-to-b from-gray-800 to-red-950 border-red-800"
-          )}>
+        {winner && !animating && (
+          <div className="text-center py-6 rounded-lg border bg-gradient-to-b from-gray-800 to-red-950 border-red-800">
             <p className="text-sm text-gray-400 mb-2">🎊 恭喜中奖</p>
-            <p
-              className={`text-4xl font-bold text-red-400 transition-all ${
-                animating ? "opacity-50" : "opacity-100"
-              }`}
-            >
+            <p className="text-4xl font-bold text-red-400">
               {winner}
             </p>
-            {!animating && winnerPrize && (
+            {winnerPrize && (
               <span className="inline-block mt-2 px-3 py-1 bg-red-700/50 text-red-200 rounded-full text-sm font-medium">
                 🏆 {winnerPrize}
               </span>
