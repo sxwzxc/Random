@@ -2,6 +2,7 @@
   "name": "koa-template",
   "version": "0.1.0",
   "private": true,
+  "author": "sxwzxc",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
