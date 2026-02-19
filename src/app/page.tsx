@@ -1,173 +1,154 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, FileText, Play } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Dices,
+  HelpCircle,
+  Star,
+  Gift,
+  Coins,
+  Dice1,
+  Users,
+  History,
+  Shuffle,
+} from "lucide-react";
+import RandomNumber from "@/components/random/RandomNumber";
+import DecisionHelper from "@/components/random/DecisionHelper";
+import DailyFortune from "@/components/random/DailyFortune";
+import LotteryDraw from "@/components/random/LotteryDraw";
+import CoinFlip from "@/components/random/CoinFlip";
+import DiceRoll from "@/components/random/DiceRoll";
+import TeamSplitter from "@/components/random/TeamSplitter";
+import HistoryPanel from "@/components/random/HistoryPanel";
+import { getHistory, type HistoryRecord } from "@/lib/storage";
+
+const TABS = [
+  { id: "number", label: "随机数", icon: Dices, color: "text-blue-400" },
+  { id: "decision", label: "选择助手", icon: HelpCircle, color: "text-purple-400" },
+  { id: "fortune", label: "今日运势", icon: Star, color: "text-yellow-400" },
+  { id: "lottery", label: "抽奖", icon: Gift, color: "text-red-400" },
+  { id: "coin", label: "抛硬币", icon: Coins, color: "text-amber-400" },
+  { id: "dice", label: "掷骰子", icon: Dice1, color: "text-green-400" },
+  { id: "team", label: "随机分组", icon: Users, color: "text-teal-400" },
+  { id: "history", label: "历史记录", icon: History, color: "text-gray-400" },
+];
 
 export default function Home() {
-  const [apiResult, setApiResult] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState("number");
+  const [history, setHistory] = useState<HistoryRecord[]>([]);
 
-  const handleApiCall = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch("/koa");
-      const data = await response.json();
-      setApiResult(data.message);
-    } catch (error) {
-      setApiResult("API call failed");
-    } finally {
-      setIsLoading(false)
+  const refreshHistory = useCallback(() => {
+    setHistory(getHistory());
+  }, []);
+
+  useEffect(() => {
+    refreshHistory();
+  }, [refreshHistory]);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "number":
+        return <RandomNumber onUpdate={refreshHistory} />;
+      case "decision":
+        return <DecisionHelper onUpdate={refreshHistory} />;
+      case "fortune":
+        return <DailyFortune onUpdate={refreshHistory} />;
+      case "lottery":
+        return <LotteryDraw onUpdate={refreshHistory} />;
+      case "coin":
+        return <CoinFlip onUpdate={refreshHistory} />;
+      case "dice":
+        return <DiceRoll onUpdate={refreshHistory} />;
+      case "team":
+        return <TeamSplitter onUpdate={refreshHistory} />;
+      case "history":
+        return <HistoryPanel records={history} onClear={refreshHistory} />;
+      default:
+        return null;
     }
   };
 
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="border-b border-gray-800">
-        <div className="container mx-auto px-6 py-4">
+      <header className="border-b border-gray-800 sticky top-0 bg-black/90 backdrop-blur-sm z-50">
+        <div className="container mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between">
-            <a href="https://pages.edgeone.ai" target="_blank" rel="noopener noreferrer">
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6rounded-full flex items-center justify-center">
-                  <img src="/eo-logo-blue.svg" alt="EdgeOne Pages" width={32} height={32} />
-                </div>
-                <h1 className="text-lg font-semibold">EdgeOne Pages</h1>
-              </div>
-            </a>
+            <div className="flex items-center space-x-3">
+              <Shuffle className="w-6 h-6 text-blue-400" />
+              <h1 className="text-lg font-semibold">随机万事屋</h1>
+            </div>
             <a
-              href="https://github.com/TencentEdgeOne/koa-template"
+              href="https://pages.edgeone.ai"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-400 hover:text-white transition-colors"
-              aria-label="GitHub"
+              aria-label="EdgeOne Pages"
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
             >
-              <svg
-                className="w-6 h-6"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <img
+                src="/eo-logo-blue.svg"
+                alt="EdgeOne"
+                width={20}
+                height={20}
+              />
+              <span className="hidden sm:inline">EdgeOne Pages</span>
             </a>
           </div>
         </div>
       </header>
 
+      {/* Hero */}
+      <div className="text-center py-8 sm:py-12 px-4">
+        <h2 className="text-3xl sm:text-4xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+          随机万事屋
+        </h2>
+        <p className="text-gray-400 max-w-xl mx-auto">
+          当你犹豫不决的时候，让随机来帮你做决定
+        </p>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="sticky top-[53px] bg-black/90 backdrop-blur-sm z-40 border-b border-gray-800">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="flex overflow-x-auto gap-1 py-2 scrollbar-hide">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-gray-800 text-white"
+                      : "text-gray-500 hover:text-gray-300 hover:bg-gray-900"
+                  }`}
+                >
+                  <Icon
+                    className={`w-4 h-4 ${isActive ? tab.color : ""}`}
+                  />
+                  {tab.label}
+                  {tab.id === "history" && history.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-gray-700 text-gray-400">
+                      {history.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-16">
-        {/* Title and Description */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-6">
-            Node Functions on EdgeOne Pages - Koa
-          </h1>
-          <p className="text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Node Functions allow you to run code in a Node Runtime without managing servers. With its capabilities, you can easily develop and deploy full-stack applications based on the Koa framework on EdgeOne Pages.
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-4 mb-12">
-          <a href="https://edgeone.ai/pages/new?from=github&template=koa-template" target="_blank" rel="noopener noreferrer">
-            <Button
-              size="lg"
-              className="bg-[#1c66e5] hover:bg-[#1c66e5]/90 text-white px-8 py-3 text-lg cursor-pointer"
-            >
-              <Zap className="mr-2 h-5 w-5" />
-              Deploy Now
-            </Button>
-          </a>
-          <a href="https://pages.edgeone.ai/document/node-functions" target="_blank" rel="noopener noreferrer">
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-gray-600 text-white hover:bg-gray-800 px-8 py-3 text-lg cursor-pointer"
-            >
-              <FileText className="mr-2 h-5 w-5" />
-              View Docs
-            </Button>
-          </a>
-        </div>
-
-        {/* Code Snippet Section */}
-        <Card className="bg-gray-900 border-gray-700 mb-8">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-gray-400 font-mono">
-              ./node-functions/koa/[[default]].js
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="text-sm text-gray-200 font-mono leading-relaxed">
-              {`import Koa from 'koa';
-import Router from '@koa/router';
-
-// Create Koa application
-const app = new Koa();
-const router = new Router();
-
-// Add some middleware
-app.use(async (ctx, next) => {
-  const start = Date.now();
-  await next();
-  const ms = Date.now() - start;
-  ctx.set('X-Response-Time', \`$\{ms\}ms\`);
-});
-
-// Define routes
-router.get('/', async (ctx) => {
-  ctx.body = { message: 'Hello from Koa on Node Functions!' };
-});
-
-
-// Use router middleware
-app.use(router.routes());
-app.use(router.allowedMethods());
-
-// Export the handler
-export default app;
-`}
-            </pre>
-          </CardContent>
-        </Card>
-
-        {/* API Call Demonstration */}
-        <Card className="bg-gray-900 border-gray-700">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <Button
-                onClick={handleApiCall}
-                disabled={isLoading}
-                className="bg-[#1c66e5] hover:bg-[#1c66e5]/90 text-white cursor-pointer"
-              >
-                {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                ) : (
-                  <Play className="w-4 h-4 mr-2" />
-                )}
-                Execute API Call
-              </Button>
-              {apiResult && (
-                <div className="text-left">
-                  <p className="text-sm text-gray-400 mb-2">API Call Result:</p>
-                  <p className="text-green-400 font-mono bg-gray-800 px-3 py-2 rounded">
-                    {apiResult}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
+        {renderContent()}
       </main>
+
       {/* Footer */}
-      <footer className="border-t border-gray-800 mt-16">
-        <div className="container mx-auto px-6 py-8">
-          <div className="text-center text-gray-400">
+      <footer className="border-t border-gray-800 mt-12">
+        <div className="container mx-auto px-6 py-6">
+          <div className="text-center text-gray-500 text-sm">
             <p>Powered by EdgeOne Pages</p>
           </div>
         </div>
