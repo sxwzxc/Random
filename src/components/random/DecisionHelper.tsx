@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { addHistory } from "@/lib/storage";
@@ -8,6 +8,11 @@ import { HelpCircle, Plus, X } from "lucide-react";
 
 const DECELERATION_FACTOR = 0.985;
 const STOP_THRESHOLD = 0.15;
+const MIN_SPIN_SPEED = 2;
+const MS_PER_FRAME = 16.67;
+const ANGLE_NORMALIZATION_OFFSET = 540;
+const MIN_DRAG_DELTA = 0.1;
+const DEFAULT_CLICK_SPEED = 16;
 
 export default function DecisionHelper({
   onUpdate,
@@ -21,7 +26,18 @@ export default function DecisionHelper({
   const [result, setResult] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
   const [rotation, setRotation] = useState(0);
-  const [initialSpeed, setInitialSpeed] = useState(24);
+  const [readyToSpin, setReadyToSpin] = useState(false);
+  const wheelRef = useRef<HTMLDivElement | null>(null);
+  const rotationRef = useRef(0);
+  const dragRef = useRef({
+    dragging: false,
+    moved: false,
+    lastAngle: 0,
+    lastTime: 0,
+    velocity: 0,
+    centerX: 0,
+    centerY: 0,
+  });
 
   const addOption = () => setOptions([...options, { text: "", weight: 1 }]);
 
@@ -67,21 +83,32 @@ export default function DecisionHelper({
     return valid[valid.length - 1]?.text ?? null;
   };
 
-  const decide = (speed = initialSpeed) => {
-    if (valid.length < 2) return;
+  const getPointerAngle = (
+    clientX: number,
+    clientY: number,
+    centerX: number,
+    centerY: number
+  ) => {
+    return (Math.atan2(clientY - centerY, clientX - centerX) * 180) / Math.PI;
+  };
+
+  const decide = (speed: number) => {
+    if (valid.length < 2 || animating) return;
     setAnimating(true);
+    setReadyToSpin(false);
     const totalWeight = valid.reduce((sum, item) => sum + item.weight, 0);
-    let current = rotation;
-    let velocity = Math.max(4, speed);
+    let current = rotationRef.current;
+    let velocity = speed;
+    if (Math.abs(velocity) < MIN_SPIN_SPEED)
+      velocity = velocity >= 0 ? MIN_SPIN_SPEED : -MIN_SPIN_SPEED;
 
     const tick = () => {
       current += velocity;
       velocity *= DECELERATION_FACTOR;
+      rotationRef.current = current;
       setRotation(current);
-      const currentResult = pickByRotation(current);
-      if (currentResult) setResult(currentResult);
 
-      if (velocity > STOP_THRESHOLD) {
+      if (Math.abs(velocity) > STOP_THRESHOLD) {
         requestAnimationFrame(tick);
         return;
       }
@@ -145,13 +172,78 @@ export default function DecisionHelper({
           <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-l-transparent border-r-transparent border-b-purple-300" />
           <div
             className={`w-full h-full rounded-full border-4 border-gray-700 shadow-lg transition-transform ${
-              animating ? "" : "cursor-pointer"
+              animating ? "" : readyToSpin ? "cursor-grab" : "cursor-default"
             }`}
             style={{
               background: wheelBackground,
               transform: `rotate(${rotation}deg)`,
             }}
-            onClick={() => !animating && decide(initialSpeed)}
+            id="decision-wheel"
+            ref={wheelRef}
+            onPointerDown={(e) => {
+              if (!readyToSpin || animating) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const centerX = rect.left + rect.width / 2;
+              const centerY = rect.top + rect.height / 2;
+              const angle = getPointerAngle(
+                e.clientX,
+                e.clientY,
+                centerX,
+                centerY
+              );
+              dragRef.current = {
+                dragging: true,
+                moved: false,
+                lastAngle: angle,
+                lastTime: performance.now(),
+                velocity: 0,
+                centerX,
+                centerY,
+              };
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              if (!dragRef.current.dragging || animating) return;
+              const angle = getPointerAngle(
+                e.clientX,
+                e.clientY,
+                dragRef.current.centerX,
+                dragRef.current.centerY
+              );
+              const delta =
+                ((angle - dragRef.current.lastAngle + ANGLE_NORMALIZATION_OFFSET) %
+                  360) -
+                180;
+              const now = performance.now();
+              const dt = Math.max(now - dragRef.current.lastTime, 1);
+              const velocity = delta / (dt / MS_PER_FRAME);
+              rotationRef.current += delta;
+              setRotation(rotationRef.current);
+              dragRef.current = {
+                dragging: true,
+                moved: dragRef.current.moved || Math.abs(delta) > MIN_DRAG_DELTA,
+                lastAngle: angle,
+                lastTime: now,
+                velocity,
+                centerX: dragRef.current.centerX,
+                centerY: dragRef.current.centerY,
+              };
+            }}
+            onPointerUp={(e) => {
+              if (!dragRef.current.dragging || animating) return;
+              e.currentTarget.releasePointerCapture(e.pointerId);
+              const launchSpeed = dragRef.current.moved
+                ? dragRef.current.velocity
+                : DEFAULT_CLICK_SPEED;
+              dragRef.current.dragging = false;
+              decide(launchSpeed);
+            }}
+            onPointerCancel={(e) => {
+              if (!dragRef.current.dragging || animating) return;
+              e.currentTarget.releasePointerCapture(e.pointerId);
+              dragRef.current.dragging = false;
+              setReadyToSpin(false);
+            }}
           />
         </div>
         {options.map((opt, i) => (
@@ -191,27 +283,24 @@ export default function DecisionHelper({
           添加选项
         </Button>
         <Button
-          onClick={() => decide(initialSpeed)}
-          disabled={animating || validCount < 2}
+          onClick={() => {
+            setResult(null);
+            setReadyToSpin(true);
+          }}
+          disabled={animating || validCount < 2 || readyToSpin}
           className="w-full bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
         >
-          {animating ? "转盘旋转中..." : "转动转盘"}
+          {animating
+            ? "转盘旋转中..."
+            : readyToSpin
+            ? "请点击或拖动转盘施加初速度"
+            : "开始转盘"}
         </Button>
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs text-gray-400">
-            <span>初速度</span>
-            <span>{initialSpeed}</span>
-          </div>
-          <input
-            type="range"
-            min="8"
-            max="40"
-            value={initialSpeed}
-            onChange={(e) => setInitialSpeed(Number(e.target.value))}
-            className="w-full accent-purple-500 cursor-pointer"
-            disabled={animating}
-          />
-        </div>
+        {readyToSpin && !animating && (
+          <p className="text-xs text-center text-gray-400">
+            在转盘上点击或拖动后松手，系统会按你的手势速度继续旋转
+          </p>
+        )}
         {result && (
           <div className="text-center py-4 bg-gray-800 rounded-lg">
             <p className="text-sm text-gray-400 mb-1">命运之选</p>
