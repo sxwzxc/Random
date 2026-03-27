@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="随机万事屋图标">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)"/>
+  <g fill="#ffffff">
+    <rect x="18" y="18" width="28" height="28" rx="7" opacity="0.95"/>
+    <circle cx="25" cy="25" r="2.8" fill="#3b82f6"/>
+    <circle cx="39" cy="25" r="2.8" fill="#3b82f6"/>
+    <circle cx="32" cy="32" r="2.8" fill="#3b82f6"/>
+    <circle cx="25" cy="39" r="2.8" fill="#3b82f6"/>
+    <circle cx="39" cy="39" r="2.8" fill="#3b82f6"/>
+  </g>
+  <path d="M50 12l1.6 4.4L56 18l-4.4 1.6L50 24l-1.6-4.4L44 18l4.4-1.6L50 12z" fill="#facc15"/>
+</svg>
